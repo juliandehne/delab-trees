@@ -32,6 +32,7 @@ class TABLE:
         AUTHOR_ID = "author_id"
         TEXT = "text"
         POST_ID = "post_id"
+        TREE_ID = "tree_id"
 
 
 class DelabTree:
@@ -84,14 +85,18 @@ class DelabTree:
         return self.author_graph
 
     def as_author_interaction_graph(self):
+        """
+        This computes the projected graph from the reply graph to the who answered whom graph (different nodes).
+        This could be considered a unweighted bipartite projection.
+        :return:
+        """
         G = self.as_author_graph()
-        # author_graph_network = nx.projected_graph(G, author_ids)
+        # assuming the dataframe and the reply graph are two views on the same data!
         author_ids = set(self.df[TABLE.COLUMNS.AUTHOR_ID].tolist())
 
         G2 = nx.DiGraph()
         G2.add_nodes_from(author_ids)
 
-        # author_pairs = combinations(author_ids, 2)
         for a in author_ids:
             tw1_out_edges = G.out_edges(a, data=True)
             for _, tw1, out_attr in tw1_out_edges:
@@ -113,6 +118,39 @@ class DelabTree:
         root = get_root(self.reply_graph)
         tree = nx.bfs_tree(self.reply_graph, root)
         return tree
+
+    def as_recursive_tree(self):
+        # TODO IMPLEMENT recursive_tree conversion
+        pass
+
+    def as_merged_self_answers_graph(self):
+        posts_df = self.df[["post_id", "author_id", "created_at", "parent_id"]]
+        posts_df.sort_values(by="created_at", inplace=True)
+        posts = None # TODO
+        to_delete_list = []
+        to_change_map = {}
+        for tweet in posts:
+            # if tweet.twitter_id == 82814624:
+            #    print("testing 1")
+
+            # we are not touching the root
+            if tweet.tn_parent is None:
+                continue
+            # if a tweet is merged, ignore
+            if tweet.twitter_id in to_delete_list:
+                continue
+            # if a tweet shares the author with its parent, deleted it
+            if tweet.author_id == tweet.tn_parent.author_id:
+                to_delete_list.append(tweet.twitter_id)
+            # if the parent has been deleted, find the next available parent
+            else:
+                current = tweet
+                while current.tn_parent.twitter_id in to_delete_list:
+                    # we can make this assertion because we did not delete the root
+                    assert current.tn_parent is not None
+                    current = current.tn_parent
+                if current.twitter_id != tweet.twitter_id:
+                    to_change_map[tweet.twitter_id] = current.tn_parent.twitter_id
 
     def paint_reply_graph(self):
         tree = self.as_tree()

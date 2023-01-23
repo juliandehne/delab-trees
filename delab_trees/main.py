@@ -2,6 +2,7 @@ from random import choice
 
 from delab_trees.delab_tree import DelabTree, TREE_IDENTIFIER
 
+
 class TreeManager:
 
     def __init__(self, df):
