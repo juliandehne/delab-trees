@@ -2,6 +2,9 @@ import networkx as nx
 import pandas as pd
 
 from delab_trees.exceptions import GraphNotInitializedException
+from delab_trees.util import get_root
+
+TREE_IDENTIFIER = "tree_id"
 
 
 class DelabTree:
@@ -13,9 +16,7 @@ class DelabTree:
     def avg_branching_factor(self):
         if self.graph is None:
             raise GraphNotInitializedException()
-        # TODO write code for avg_branching_factor
-        nx_tree = self.df.index
-        return None
+        return nx.tree.branching_weight(self.as_tree())
 
     def total_number_of_posts(self):
         return len(self.df.index)
@@ -26,3 +27,10 @@ class DelabTree:
                                                  create_using=nx.MultiDiGraph())
         self.graph = networkx_graph
         return networkx_graph
+
+    def as_tree(self):
+        if self.graph is None:
+            raise GraphNotInitializedException()
+        root = get_root(self.graph)
+        tree = nx.bfs_tree(self.graph, root)
+        return tree

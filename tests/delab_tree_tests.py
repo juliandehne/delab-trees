@@ -1,9 +1,9 @@
 import unittest
 
 import pandas as pd
-from pandas import DataFrame
 
-from delab_trees.delab_trees import DelabTrees
+from delab_trees.delab_tree import DelabTree
+from delab_trees.main import TreeManager
 
 
 class DelabTreeConstructionTestCase(unittest.TestCase):
@@ -24,17 +24,22 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
         df3 = pd.DataFrame(data=d3)
         df_list = [df1, df2, df3]
         self.df = pd.concat(df_list, ignore_index=True)
-        self.delab = DelabTrees(self.df)
+        self.manager = TreeManager(self.df)
 
         # self.test_df =
 
     def test_load_trees(self):
-        """Test 0 multiplied by 2"""
-        self.delab.initialize_trees()
-        assert len(self.delab.trees) == 3
-        n_graph = self.delab.trees[1].graph
+        # tests if the dataframes is loaded correctly as multiple trees
+        self.manager.initialize_trees()
+        assert len(self.manager.trees) == 3
+        n_graph = self.manager.trees[1].graph
         assert n_graph is not None
         assert len(n_graph.edges()) == 3
+
+    def test_tree_metrics(self):
+        test_tree: DelabTree = self.manager.initialize_trees().random()
+        assert test_tree.total_number_of_posts() == 4
+        assert test_tree.avg_branching_factor() > 0
 
 
 if __name__ == '__main__':
