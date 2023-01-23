@@ -13,7 +13,7 @@ class TreeManager:
         grouped_by_tree_ids = {k: v for k, v in self.df.groupby(TREE_IDENTIFIER)}
         for tree_id, df in grouped_by_tree_ids.items():
             tree = DelabTree(df)
-            tree.initialize_networkx_tree()
+            tree.as_reply_graph()
             self.trees[tree_id] = tree
         return self
 
