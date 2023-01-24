@@ -49,14 +49,20 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
         test_tree: DelabTree = self.manager.random()
         assert test_tree.total_number_of_posts() == 4
         assert test_tree.average_branching_factor() > 0
-        print("\n\nNOTES: ")
-        print("the branching weight is {}".format(test_tree.branching_weight()))
-        print("the avg branching factor is {}".format(test_tree.average_branching_factor()))
+        # print("\n\nNOTES: ")
+        # print("the branching weight is {}".format(test_tree.branching_weight()))
+        # print("the avg branching factor is {}".format(test_tree.average_branching_factor()))
 
     def test_author_graph(self):
         tree: DelabTree = self.manager.trees[1]
         author_graph = tree.as_author_graph()
         assert len(author_graph.edges()) == 7
+
+    def test_merge_subsequent_graph(self):
+        tree: DelabTree = self.manager.trees[4]
+        merged_graph = tree.as_merged_self_answers_graph()
+        assert len(merged_graph.edges()) == 1
+        # print(merged_graph.edges(data=True))
 
 
 if __name__ == '__main__':

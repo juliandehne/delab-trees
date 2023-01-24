@@ -1,5 +1,8 @@
+from copy import copy, deepcopy
+
 import matplotlib.pyplot as plt
 import networkx as nx
+import numpy as np
 import pandas as pd
 from networkx import MultiDiGraph
 from networkx.drawing.nx_pydot import graphviz_layout
@@ -28,6 +31,7 @@ class GRAPH:
 
 class TABLE:
     class COLUMNS:
+        PARENT_ID = "parent_id"
         CREATED_AT = "created_at"
         AUTHOR_ID = "author_id"
         TEXT = "text"
@@ -38,9 +42,11 @@ class TABLE:
 class DelabTree:
 
     def __init__(self, df: pd.DataFrame):
-        self.df: DataFrame = df
+        self.df: DataFrame = deepcopy(df)
         self.reply_graph: MultiDiGraph = None
         self.author_graph: MultiDiGraph = None
+        self.conversation_id = self.df.iloc[0][TABLE.COLUMNS.TREE_ID]
+        # print("initialized")
 
     def branching_weight(self):
         if self.reply_graph is None:
@@ -124,33 +130,76 @@ class DelabTree:
         pass
 
     def as_merged_self_answers_graph(self):
-        posts_df = self.df[["post_id", "author_id", "created_at", "parent_id"]]
-        posts_df.sort_values(by="created_at", inplace=True)
-        posts = None # TODO
+        posts_df = self.df[[TABLE.COLUMNS.POST_ID,
+                            TABLE.COLUMNS.AUTHOR_ID,
+                            TABLE.COLUMNS.CREATED_AT,
+                            TABLE.COLUMNS.PARENT_ID]]
+        posts_df = posts_df.sort_values(by=TABLE.COLUMNS.CREATED_AT)
         to_delete_list = []
         to_change_map = {}
-        for tweet in posts:
-            # if tweet.twitter_id == 82814624:
-            #    print("testing 1")
-
+        for row_index in posts_df.index.values:
             # we are not touching the root
-            if tweet.tn_parent is None:
+            author_id, parent_author_id, parent_id, post_id = self.__get_table_row_as_names(posts_df, row_index)
+            if parent_id is None:
                 continue
             # if a tweet is merged, ignore
-            if tweet.twitter_id in to_delete_list:
+            if post_id in to_delete_list:
                 continue
             # if a tweet shares the author with its parent, deleted it
-            if tweet.author_id == tweet.tn_parent.author_id:
-                to_delete_list.append(tweet.twitter_id)
+            if author_id == parent_author_id:
+                to_delete_list.append(post_id)
             # if the parent has been deleted, find the next available parent
             else:
-                current = tweet
-                while current.tn_parent.twitter_id in to_delete_list:
+                current = row_index
+                moving_post_id = deepcopy(post_id)
+                moving_parent_id = deepcopy(parent_id)
+                moving_parent_author_id = deepcopy(parent_author_id)
+                while moving_parent_id in to_delete_list:
                     # we can make this assertion because we did not delete the root
-                    assert current.tn_parent is not None
-                    current = current.tn_parent
-                if current.twitter_id != tweet.twitter_id:
-                    to_change_map[tweet.twitter_id] = current.tn_parent.twitter_id
+                    moving_author_id, moving_parent_author_id, moving_parent_id, moving_post_id = \
+                        self.__get_table_row_as_names(posts_df, current)
+                    assert moving_parent_id is not None
+                    current = posts_df.index[posts_df[TABLE.COLUMNS.POST_ID] == parent_id]
+                if moving_post_id != post_id:
+                    to_change_map[post_id] = moving_parent_author_id
+
+        # constructing the new graph
+        G = nx.DiGraph()
+        edges = []
+        row_indexes2 = [row_index for row_index in posts_df.index
+                        if posts_df.loc[row_index][TABLE.COLUMNS.POST_ID] not in to_delete_list]
+        post_ids = list(posts_df.loc[row_indexes2][TABLE.COLUMNS.POST_ID])
+        for row_index2 in row_indexes2:
+            author_id, parent_author_id, parent_id, post_id = self.__get_table_row_as_names(posts_df, row_index2)
+            if parent_id is not None and not np.isnan(parent_id):
+                # if parent_id not in post_ids and parent_id not in to_delete_list:
+                #     print("conversation {} has no root_node".format(self.conversation_id))
+                if post_id in to_change_map:
+                    new_parent = to_change_map[post_id]
+                    if new_parent in post_ids:
+                        edges.append((new_parent, post_id))
+                    else:
+                        G.remove_node(post_id)
+                else:
+                    edges.append((parent_id, post_id))
+
+        assert len(edges) > 0, "there are no edges for conversation {}".format(self.conversation_id)
+        G.add_edges_from(edges, label=GRAPH.LABELS.PARENT_OF)
+        nx.set_node_attributes(G, GRAPH.SUBSETS.TWEETS, name="subset")
+        # return G, to_delete_list, changed_nodes
+        return G
+
+    @staticmethod
+    def __get_table_row_as_names(posts_df, row_index):
+        post_data = posts_df.loc[row_index]
+        parent_id = post_data[TABLE.COLUMNS.PARENT_ID]
+        post_id = post_data[TABLE.COLUMNS.POST_ID]
+        author_id = post_data[TABLE.COLUMNS.AUTHOR_ID]
+        parent_author_id = None
+        parent_author_frame = posts_df[posts_df[TABLE.COLUMNS.POST_ID] == parent_id]
+        if not parent_author_frame.empty:
+            parent_author_id = parent_author_frame.iloc[0][TABLE.COLUMNS.AUTHOR_ID]
+        return author_id, parent_author_id, parent_id, post_id
 
     def paint_reply_graph(self):
         tree = self.as_tree()
