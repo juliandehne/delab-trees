@@ -140,7 +140,7 @@ class DelabTree:
         for row_index in posts_df.index.values:
             # we are not touching the root
             author_id, parent_author_id, parent_id, post_id = self.__get_table_row_as_names(posts_df, row_index)
-            if parent_id is None:
+            if parent_id is None or np.isnan(parent_id):
                 continue
             # if a tweet is merged, ignore
             if post_id in to_delete_list:
@@ -159,9 +159,9 @@ class DelabTree:
                     moving_author_id, moving_parent_author_id, moving_parent_id, moving_post_id = \
                         self.__get_table_row_as_names(posts_df, current)
                     assert moving_parent_id is not None
-                    current = posts_df.index[posts_df[TABLE.COLUMNS.POST_ID] == parent_id]
+                    current = posts_df.index[posts_df[TABLE.COLUMNS.POST_ID] == moving_parent_id].values[0]
                 if moving_post_id != post_id:
-                    to_change_map[post_id] = moving_parent_author_id
+                    to_change_map[post_id] = moving_parent_id
 
         # constructing the new graph
         G = nx.DiGraph()
@@ -187,6 +187,7 @@ class DelabTree:
         G.add_edges_from(edges, label=GRAPH.LABELS.PARENT_OF)
         nx.set_node_attributes(G, GRAPH.SUBSETS.TWEETS, name="subset")
         # return G, to_delete_list, changed_nodes
+        print("removed {} and changed {}".format(to_delete_list, to_change_map))
         return G
 
     @staticmethod
@@ -196,6 +197,7 @@ class DelabTree:
         post_id = post_data[TABLE.COLUMNS.POST_ID]
         author_id = post_data[TABLE.COLUMNS.AUTHOR_ID]
         parent_author_id = None
+        # if parent_id is not None and np.isnan(parent_id) is False:
         parent_author_frame = posts_df[posts_df[TABLE.COLUMNS.POST_ID] == parent_id]
         if not parent_author_frame.empty:
             parent_author_id = parent_author_frame.iloc[0][TABLE.COLUMNS.AUTHOR_ID]
