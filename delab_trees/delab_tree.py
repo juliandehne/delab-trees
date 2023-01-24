@@ -8,6 +8,7 @@ from networkx import MultiDiGraph
 from networkx.drawing.nx_pydot import graphviz_layout
 from pandas import DataFrame
 
+from delab_trees.delab_post import DelabPost, DelabPosts
 from delab_trees.exceptions import GraphNotInitializedException
 from delab_trees.util import get_root
 
@@ -189,6 +190,24 @@ class DelabTree:
         # return G, to_delete_list, changed_nodes
         print("removed {} and changed {}".format(to_delete_list, to_change_map))
         return G
+
+    def get_conversation_flows(self):
+        reply_tree = self.reply_graph
+        root = get_root(reply_tree)
+        leaves = [x for x in reply_tree.nodes() if reply_tree.out_degree(x) == 0]
+        flows = []
+        flow_dict = {}
+        for leaf in leaves:
+            paths = nx.all_simple_paths(reply_tree, root, leaf)
+            flows.append(next(paths))
+        for flow in flows:
+            flow_name = str(flow[0]) + "_" + str(flow[-1])
+            flow_tweets_frame = self.df[self.df[TABLE.COLUMNS.POST_ID].isin(flow)]
+            flow_tweets = DelabPosts.from_pandas(flow_tweets_frame)
+            flow_dict[flow_name] = flow_tweets
+
+        name_of_longest = max(flow_dict, key=lambda x: len(set(flow_dict[x])))
+        return flow_dict, name_of_longest
 
     @staticmethod
     def __get_table_row_as_names(posts_df, row_index):
