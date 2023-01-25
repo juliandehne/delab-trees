@@ -1,4 +1,6 @@
-from delab_tree import GRAPH, TABLE
+from typing import List
+
+from delab_trees.constants import TABLE
 
 
 class DelabPost:
@@ -11,7 +13,7 @@ class DelabPost:
 class DelabPosts:
 
     @staticmethod
-    def from_pandas(df):
+    def from_pandas(df) -> List[DelabPost]:
         result = []
         for i in df.index:
             row = df.loc[i]

@@ -46,7 +46,7 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
 
     def test_load_trees(self):
         # tests if the dataframes is loaded correctly as multiple trees
-        assert len(self.manager.trees) == 4
+        assert len(self.manager.trees) == 5
         n_graph = self.manager.trees[1].reply_graph
         assert n_graph is not None
         assert len(n_graph.edges()) == 3
@@ -72,6 +72,11 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
         tree2: DelabTree = self.manager.trees[5]
         merged_graph2 = tree2.as_merged_self_answers_graph()
         assert len(merged_graph2.edges()) == 1
+
+    def test_flow_computation(self):
+        tree: DelabTree = self.manager.trees[4]
+        flow_dict, name_of_longest = tree.get_conversation_flows()
+        assert len(flow_dict[name_of_longest]) == 3
 
 
 if __name__ == '__main__':

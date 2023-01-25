@@ -1,6 +1,7 @@
 from random import choice
 
-from delab_trees.delab_tree import DelabTree, TREE_IDENTIFIER
+from delab_trees.constants import TREE_IDENTIFIER
+from delab_trees.delab_tree import DelabTree
 
 
 class TreeManager:

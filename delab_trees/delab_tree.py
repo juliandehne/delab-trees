@@ -1,4 +1,5 @@
 from copy import copy, deepcopy
+from typing import List
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -11,34 +12,7 @@ from pandas import DataFrame
 from delab_trees.delab_post import DelabPost, DelabPosts
 from delab_trees.exceptions import GraphNotInitializedException
 from delab_trees.util import get_root
-
-TREE_IDENTIFIER = "tree_id"
-
-
-class GRAPH:
-    class ATTRIBUTES:
-        CREATED_AT = "created_at"
-
-    class LABELS:
-        MENTIONS = "mentions"
-        PARENT_OF = "parent_of"
-        AUTHOR_OF = "author_of"
-        ANSWERED_BY = "answered_by"
-
-    class SUBSETS:
-        TWEETS = "tweets"
-        AUTHORS = "authors"
-
-
-class TABLE:
-    class COLUMNS:
-        PARENT_ID = "parent_id"
-        CREATED_AT = "created_at"
-        AUTHOR_ID = "author_id"
-        TEXT = "text"
-        POST_ID = "post_id"
-        TREE_ID = "tree_id"
-
+from delab_trees.constants import TABLE, GRAPH
 
 class DelabTree:
 
@@ -192,6 +166,11 @@ class DelabTree:
         return G
 
     def get_conversation_flows(self):
+        """
+        computes all flows (paths that lead from root to leaf) in the reply tree
+        :rtype: object
+        :return:
+        """
         reply_tree = self.reply_graph
         root = get_root(reply_tree)
         leaves = [x for x in reply_tree.nodes() if reply_tree.out_degree(x) == 0]
