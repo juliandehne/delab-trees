@@ -9,10 +9,12 @@ from networkx import MultiDiGraph
 from networkx.drawing.nx_pydot import graphviz_layout
 from pandas import DataFrame
 
+from delab_trees.delab_author_metric import AuthorMetric
 from delab_trees.delab_post import DelabPost, DelabPosts
 from delab_trees.exceptions import GraphNotInitializedException
 from delab_trees.util import get_root
 from delab_trees.constants import TABLE, GRAPH
+
 
 class DelabTree:
 
@@ -73,7 +75,7 @@ class DelabTree:
         """
         G = self.as_author_graph()
         # assuming the dataframe and the reply graph are two views on the same data!
-        author_ids = set(self.df[TABLE.COLUMNS.AUTHOR_ID].tolist())
+        author_ids = self.__get_author_ids()
 
         G2 = nx.DiGraph()
         G2.add_nodes_from(author_ids)
@@ -92,6 +94,10 @@ class DelabTree:
                                 G2.add_edge(a, reply_author, label=GRAPH.LABELS.ANSWERED_BY)
 
         return G2
+
+    def __get_author_ids(self):
+        author_ids = set(self.df[TABLE.COLUMNS.AUTHOR_ID].tolist())
+        return author_ids
 
     def as_tree(self):
         if self.reply_graph is None:
@@ -187,6 +193,27 @@ class DelabTree:
 
         name_of_longest = max(flow_dict, key=lambda x: len(set(flow_dict[x])))
         return flow_dict, name_of_longest
+
+    def get_author_metrics(self):
+        result = {}
+        author_interaction_graph = self.as_author_interaction_graph()
+        katz_centrality = nx.katz_centrality(author_interaction_graph)
+        try:
+            betweenness_centrality = nx.betweenness_centrality(author_interaction_graph)
+        except ValueError:
+            betweenness_centrality = {}
+
+        author_ids = self.__get_author_ids()
+        for author_id in author_ids:
+            closeness_centrality = nx.closeness_centrality(author_interaction_graph, author_id)
+            betweenness_centrality = betweenness_centrality.get(author_id, None)
+            katz_centrality = katz_centrality.get(author_id, None)
+            metric = AuthorMetric(closeness_centrality, betweenness_centrality, katz_centrality)
+            result[author_id] = metric
+        return result
+
+    def get_single_author_metrics(self, author_id):
+        return self.get_author_metrics().get(author_id, None)
 
     @staticmethod
     def __get_table_row_as_names(posts_df, row_index):
