@@ -78,6 +78,11 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
         flow_dict, name_of_longest = tree.get_conversation_flows()
         assert len(flow_dict[name_of_longest]) == 3
 
+    def test_author_centrality(self):
+        tree: DelabTree = self.manager.trees[1]
+        measures = tree.get_author_metrics()
+        assert measures is not None
+
 
 if __name__ == '__main__':
     unittest.main()
