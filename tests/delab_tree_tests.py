@@ -83,6 +83,13 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
         measures = tree.get_author_metrics()
         assert measures is not None
 
+    def test_author_baseline_vision(self):
+        tree: DelabTree = self.manager.trees[1]
+        measures = tree.get_author_metrics()
+        author_measures_steven = measures["steven"]
+        author_measures_mark = measures["mark"]
+        assert author_measures_steven.baseline_author_vision > author_measures_mark.baseline_author_vision
+
 
 if __name__ == '__main__':
     unittest.main()

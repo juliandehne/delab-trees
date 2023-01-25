@@ -1,6 +1,5 @@
 from collections import defaultdict
-from copy import copy, deepcopy
-from typing import List
+from copy import deepcopy
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -10,11 +9,11 @@ from networkx import MultiDiGraph
 from networkx.drawing.nx_pydot import graphviz_layout
 from pandas import DataFrame
 
+from delab_trees.constants import TABLE, GRAPH
 from delab_trees.delab_author_metric import AuthorMetric
-from delab_trees.delab_post import DelabPost, DelabPosts
+from delab_trees.delab_post import DelabPosts
 from delab_trees.exceptions import GraphNotInitializedException
 from delab_trees.util import get_root
-from delab_trees.constants import TABLE, GRAPH
 
 
 class DelabTree:
@@ -232,21 +231,21 @@ class DelabTree:
             n_posts = len(author2posts[author])
             root_distance_measure = 0
             reply_vision_measure = 0
-            for tweet in author2posts[author]:
-                if tweet in to_delete_list:
+            for post in author2posts[author]:
+                if post in to_delete_list:
                     continue
-                if tweet == root:
+                if post == root:
                     root_distance_measure += 1
                 else:
-                    path = next(nx.all_simple_paths(author_interaction_graph, root, tweet))
+                    path = next(nx.all_simple_paths(author_interaction_graph, root, post))
                     root_distance = len(path)
                     root_distance_measure += 0.25 ** root_distance
                     reply_vision_path_measure = 0
 
-                    reply_paths = next(nx.all_simple_paths(author_interaction_graph, root, tweet))
+                    reply_paths = next(nx.all_simple_paths(author_interaction_graph, root, post))
                     for previous_tweet in reply_paths:
-                        if previous_tweet != tweet:
-                            path_to_previous = nx.all_simple_paths(author_interaction_graph, previous_tweet, tweet)
+                        if previous_tweet != post:
+                            path_to_previous = nx.all_simple_paths(author_interaction_graph, previous_tweet, post)
                             path_to_previous = next(path_to_previous)
                             path_length = len(path_to_previous)
                             reply_vision_path_measure += 0.5 ** path_length
@@ -254,42 +253,40 @@ class DelabTree:
                     reply_vision_measure += reply_vision_path_measure
             root_distance_measure = root_distance_measure / n_posts
             reply_vision_measure = reply_vision_measure / n_posts
-            author2baseline[author] = (root_distance_measure + reply_vision_measure) / 2  # un-normalized
+            # author2baseline[author] = (root_distance_measure + reply_vision_measure) / 2  # un-normalized
+            author2baseline[author] = reply_vision_measure  # un-normalized
             baseline = author2baseline[author]
             assert 0 <= baseline <= 1
         return author2baseline
 
     def __get_author_post_map(self):
-        tweet2author = zip(self.df[TABLE.COLUMNS.POST_ID], self.df[TABLE.COLUMNS.AUTHOR_ID])
+        tweet2author = my_dict = self.df.set_index(TABLE.COLUMNS.POST_ID)[TABLE.COLUMNS.AUTHOR_ID].to_dict()
         inverted_dict = defaultdict(list)
         for key, value in tweet2author.items():
             inverted_dict[value].append(key)
         author2posts = dict(inverted_dict)
         return tweet2author, author2posts
 
+    def get_single_author_metrics(self, author_id):
+        return self.get_author_metrics().get(author_id, None)
 
-def get_single_author_metrics(self, author_id):
-    return self.get_author_metrics().get(author_id, None)
+    @staticmethod
+    def __get_table_row_as_names(posts_df, row_index):
+        post_data = posts_df.loc[row_index]
+        parent_id = post_data[TABLE.COLUMNS.PARENT_ID]
+        post_id = post_data[TABLE.COLUMNS.POST_ID]
+        author_id = post_data[TABLE.COLUMNS.AUTHOR_ID]
+        parent_author_id = None
+        # if parent_id is not None and np.isnan(parent_id) is False:
+        parent_author_frame = posts_df[posts_df[TABLE.COLUMNS.POST_ID] == parent_id]
+        if not parent_author_frame.empty:
+            parent_author_id = parent_author_frame.iloc[0][TABLE.COLUMNS.AUTHOR_ID]
+        return author_id, parent_author_id, parent_id, post_id
 
-
-@staticmethod
-def __get_table_row_as_names(posts_df, row_index):
-    post_data = posts_df.loc[row_index]
-    parent_id = post_data[TABLE.COLUMNS.PARENT_ID]
-    post_id = post_data[TABLE.COLUMNS.POST_ID]
-    author_id = post_data[TABLE.COLUMNS.AUTHOR_ID]
-    parent_author_id = None
-    # if parent_id is not None and np.isnan(parent_id) is False:
-    parent_author_frame = posts_df[posts_df[TABLE.COLUMNS.POST_ID] == parent_id]
-    if not parent_author_frame.empty:
-        parent_author_id = parent_author_frame.iloc[0][TABLE.COLUMNS.AUTHOR_ID]
-    return author_id, parent_author_id, parent_id, post_id
-
-
-def paint_reply_graph(self):
-    tree = self.as_tree()
-    pos = graphviz_layout(tree, prog="twopi")
-    # add_attributes_to_plot(conversation_graph, pos, tree)
-    nx.draw_networkx_labels(tree, pos)
-    nx.draw(tree, pos)
-    plt.show()
+    def paint_reply_graph(self):
+        tree = self.as_tree()
+        pos = graphviz_layout(tree, prog="twopi")
+        # add_attributes_to_plot(conversation_graph, pos, tree)
+        nx.draw_networkx_labels(tree, pos)
+        nx.draw(tree, pos)
+        plt.show()
