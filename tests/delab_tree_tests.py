@@ -90,6 +90,11 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
         author_measures_mark = measures["mark"]
         assert author_measures_steven.baseline_author_vision > author_measures_mark.baseline_author_vision
 
+    def test_rb_algorithm(self):
+        tree: DelabTree = self.manager.trees[1]
+        rb_vision = self.manager.get_rb_vision(tree)
+        assert rb_vision["steven"] > 0
+
 
 if __name__ == '__main__':
     unittest.main()

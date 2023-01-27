@@ -17,6 +17,13 @@ def get_root(conversation_graph: nx.DiGraph):  # tree rooted at 0
 
 
 def get_all_reply_paths(conversation_graph: nx.DiGraph, min_path_length, required_max_path_length):
+    """
+    Get all reply paths that fall in the length window
+    :param conversation_graph:
+    :param min_path_length:
+    :param required_max_path_length:
+    :return:
+    """
     G = conversation_graph
     all_paths = []
     nodes_combs = itertools.combinations(G.nodes, 2)

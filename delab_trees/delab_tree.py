@@ -11,7 +11,7 @@ from pandas import DataFrame
 
 from delab_trees.constants import TABLE, GRAPH
 from delab_trees.delab_author_metric import AuthorMetric
-from delab_trees.delab_post import DelabPosts
+from delab_trees.delab_post import DelabPosts, DelabPost
 from delab_trees.exceptions import GraphNotInitializedException
 from delab_trees.util import get_root
 
@@ -106,8 +106,12 @@ class DelabTree:
         tree = nx.bfs_tree(self.reply_graph, root)
         return tree
 
+    def as_post_list(self) -> list[DelabPost]:
+        return DelabPosts.from_pandas(self.df)
+
     def as_recursive_tree(self):
         # TODO IMPLEMENT recursive_tree conversion
+        # The recursive Tree has the tostring and toxml implemented
         pass
 
     def as_merged_self_answers_graph(self, return_deleted=False):
