@@ -3,6 +3,8 @@ from random import choice
 
 import pandas as pd
 
+from delab_trees.algorithms.preperation_alg_pb import prepare_pb_data
+from delab_trees.algorithms.training_alg_pb import train_pb
 from delab_trees.constants import TREE_IDENTIFIER
 from delab_trees.delab_tree import DelabTree
 from delab_trees.algorithms.preperation_alg_rb import prepare_rb_data
@@ -61,8 +63,27 @@ class TreeManager:
         else:
             return applied_rb_model[tree.conversation_id]
 
-    def __prepare_pb_model(self):
-        pass
+    def __prepare_pb_model(self, prepared_data_filepath):
+        rb_prepared_data = prepare_pb_data(self)
+        rb_prepared_data.to_pickle(prepared_data_filepath)
+        return rb_prepared_data
 
-    def train_apply_pb_model(self):
-        pass
+    def __train_apply_pb_model(self, prepared_data_filepath="pb_prepared_data.pkl", prepare_data=True) \
+            -> dict['tree_id', dict['author_id', 'pb_vision']]:
+        if prepare_data:
+            data = self.__prepare_pb_model(prepared_data_filepath)
+        else:
+            with open("pb_prepared_data.pkl", 'rb') as f:
+                data = pickle.load(f)
+        assert data.empty is False, "There was a mistake during the preparation of the data for the pb algorithm"
+        applied_model = train_pb(data)
+
+        result = applied_model.pivot(columns='conversation_id', index='author', values="predictions").to_dict()
+        return result
+
+    def get_pb_vision(self, tree: DelabTree = None):
+        applied_pb_model = self.__train_apply_pb_model()
+        if tree is None:
+            return applied_pb_model
+        else:
+            return applied_pb_model[tree.conversation_id]

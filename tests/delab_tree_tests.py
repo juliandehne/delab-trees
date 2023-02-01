@@ -95,6 +95,12 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
         rb_vision = self.manager.get_rb_vision(tree)
         assert rb_vision["steven"] is not None
 
+    def test_pb_algorithm(self):
+        # tree: DelabTree = self.manager.trees[1]
+        # pb_vision = self.manager.get_pb_vision(tree)
+        # assert pb_vision["steven"] is not None
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()

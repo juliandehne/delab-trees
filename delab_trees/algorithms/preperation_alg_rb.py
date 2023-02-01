@@ -21,7 +21,7 @@ def prepare_rb_data(manager):
 
         root_node = get_root(reply_graph)
         conversation_graph = tree.as_author_graph()
-        follower_Graph = nx.MultiDiGraph()  # TODO import follower structures
+        follower_Graph = nx.MultiDiGraph()
         posts = tree.as_post_list()
 
         for post in posts:
