@@ -21,7 +21,7 @@ setup(
     long_description_content_type="text/markdown",
     url="",
     author="Julian Dehne",
-    author_email="example@email.com",
+    author_email="julian.dehne@gmail.com",
     license="MIT",
     classifiers=[
         "Intended Audience :: Developers",
@@ -34,7 +34,8 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Operating System :: OS Independent"
     ],
-    packages=["delab-trees"],
+    packages=["delab_trees"],
     include_package_data=True,
-    install_requires=["numpy", "pandas", "random", "networkx"]
+    install_requires=["numpy", "pandas", "random", "networkx", "scikit-learn", "keras==2.9", "matplotlib",
+                      "tensorflow==2.11.0"]
 )
