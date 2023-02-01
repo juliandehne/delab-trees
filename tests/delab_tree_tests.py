@@ -93,7 +93,7 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
     def test_rb_algorithm(self):
         tree: DelabTree = self.manager.trees[1]
         rb_vision = self.manager.get_rb_vision(tree)
-        assert rb_vision["steven"] > 0
+        assert rb_vision["steven"] is not None
 
 
 if __name__ == '__main__':

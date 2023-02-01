@@ -6,7 +6,7 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.models import Sequential
 
 
-def train_rb(data: DataFrame, inspect=False):
+def train_rb(data: DataFrame, inspect=False) -> DataFrame:
     tw_x, tw_y, tw_test_x, tw_test_y, tw_model = __train_model(data)
     if inspect:
         inspect_model(tw_x, tw_y, tw_test_x, tw_test_y, tw_model)
@@ -17,9 +17,10 @@ def train_rb(data: DataFrame, inspect=False):
     tw_predictions = tw_model.predict(tw_features)
 
     tw_vision = tw_non_features.assign(predictions=tw_predictions)
-    not_needed_list = ["beam_node_author", "beam_node", "has_followed_path", "has_follow_path"]
+    not_needed_list = ["beam_node_author", "beam_node", "has_followed_path", "has_follow_path", "current"]
     author_vision_result = tw_vision.drop(not_needed_list, axis=1)
-    return author_vision_result, tw_model, tw_features
+    applied_model = author_vision_result.groupby(["conversation_id", "author"]).mean().reset_index()
+    return applied_model, tw_model, tw_features
 
 
 non_feature_list = ["current", "beam_node", "conversation_id", "has_followed_path", "has_follow_path",

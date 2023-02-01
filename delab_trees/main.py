@@ -49,9 +49,10 @@ class TreeManager:
         else:
             with open("rb_prepared_data.pkl", 'rb') as f:
                 data = pickle.load(f)
+        assert data.empty is False, "There was a mistake during the preparation of the data for the rb algorithm"
         applied_model, trained_model, features = train_rb(data)
-        # TODO convert applied_model to dictionary of dictionaries
-        return applied_model
+        result = applied_model.pivot(columns='conversation_id', index='author', values="predictions").to_dict()
+        return result
 
     def get_rb_vision(self, tree: DelabTree = None):
         applied_rb_model = self.__train_apply_rb_model()

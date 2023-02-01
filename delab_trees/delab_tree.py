@@ -39,13 +39,16 @@ class DelabTree:
 
     def as_reply_graph(self):
         if self.reply_graph is None:
-            df = self.df[self.df['parent_id'].notna()]
+            node2creation = self.df.set_index(TABLE.COLUMNS.POST_ID).to_dict()[TABLE.COLUMNS.CREATED_AT]
+            df = self.df[self.df[TABLE.COLUMNS.PARENT_ID].notna()]
             df = df.assign(label=GRAPH.LABELS.PARENT_OF)
-            # print(df)
-            networkx_graph = nx.from_pandas_edgelist(df, source="parent_id", target="post_id", edge_attr='label',
+            networkx_graph = nx.from_pandas_edgelist(df,
+                                                     source=TABLE.COLUMNS.PARENT_ID,
+                                                     target=TABLE.COLUMNS.POST_ID,
+                                                     edge_attr='label',
                                                      create_using=nx.MultiDiGraph())
             nx.set_node_attributes(networkx_graph, GRAPH.SUBSETS.TWEETS, name="subset")  # rename to posts
-            # print(networkx_graph.edges(data=True))
+            nx.set_node_attributes(networkx_graph, node2creation, name=TABLE.COLUMNS.CREATED_AT)
             self.reply_graph = networkx_graph
         return self.reply_graph
 
@@ -62,7 +65,8 @@ class DelabTree:
         # print(df)
         networkx_graph = nx.from_pandas_edgelist(df, source="author_id", target="post_id", edge_attr='label',
                                                  create_using=nx.MultiDiGraph())
-        nx.set_node_attributes(networkx_graph, GRAPH.SUBSETS.AUTHORS, name="subset")  # rename to posts
+        author2authorlabel = dict([(author_id, GRAPH.SUBSETS.AUTHORS) for author_id in self.__get_author_ids()])
+        nx.set_node_attributes(networkx_graph, author2authorlabel, name="subset")  # rename to posts
         # print(networkx_graph.edges(data=True))
         self.author_graph = nx.compose(self.reply_graph, networkx_graph)
         return self.author_graph

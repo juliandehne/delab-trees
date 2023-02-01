@@ -1,8 +1,9 @@
 import pandas as pd
 
+from delab_trees.constants import GRAPH, TABLE
 from delab_trees.delab_post import DelabPost
 from delab_trees.delab_tree import DelabTree
-from delab_trees.main import TreeManager
+
 from delab_trees.util import get_root
 
 import logging
@@ -12,8 +13,9 @@ import networkx.exception
 logger = logging.getLogger(__name__)
 
 
-def prepare_rb_data(manager: TreeManager):
-    for tree in manager.trees:
+def prepare_rb_data(manager):
+    records = []
+    for tree_id, tree in manager.trees.items():
         tree: DelabTree = tree
         reply_graph = tree.as_reply_graph()
 
@@ -22,7 +24,6 @@ def prepare_rb_data(manager: TreeManager):
         follower_Graph = nx.MultiDiGraph()  # TODO import follower structures
         posts = tree.as_post_list()
 
-        records = []
         for post in posts:
             row_dict = calculate_row(post, reply_graph, follower_Graph, conversation_graph, root_node)
             # empty dictionaries evaluate to false
@@ -45,7 +46,7 @@ def calculate_row(post: DelabPost, reply_graph: nx.DiGraph, follower_graph: nx.M
     """
 
     conversation_depth, path_dict, reply_nodes, result_of_results, root_path_dict, row_node_author_id, row_node_id = \
-        prepare_row_analysis(conversation_graph, reply_graph, root_node, post)
+        prepare_row_analysis(reply_graph, root_node, post)
 
     for current_node_id, current_node_attr in reply_nodes:
         result = {}
@@ -71,13 +72,13 @@ def calculate_row(post: DelabPost, reply_graph: nx.DiGraph, follower_graph: nx.M
     return result_of_results
 
 
-def prepare_row_analysis(conversation_graph, reply_graph, root_node, post):
+def prepare_row_analysis(reply_graph, root_node, post):
     result_of_results = []
     row_node_id = post.post_id
     row_node_author_id = post.author_id
     # we are only looking at the picture before the current tweet
-    reply_nodes = [(x, y) for x, y in conversation_graph.nodes(data=True)
-                   if y['subset'] == "tweets" and y['created_at'] < post.created_at]
+    reply_nodes = [(x, y) for x, y in reply_graph.nodes(data=True)
+                   if y[TABLE.COLUMNS.CREATED_AT] < post.created_at]
     conversation_depth = nx.dag_longest_path_length(reply_graph)
     # call the all simple graphs is too slow
     path_dict = compute_all_path_length_dict(reply_graph, reply_nodes, row_node_id)

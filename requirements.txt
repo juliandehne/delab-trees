@@ -4,3 +4,4 @@ pandas~=1.4.3
 scikit-learn
 tensorflow==2.11.0
 matplotlib~=3.4.3
+keras==2.9
