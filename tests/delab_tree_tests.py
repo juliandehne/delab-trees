@@ -3,7 +3,7 @@ import unittest
 import pandas as pd
 
 from delab_trees.delab_tree import DelabTree
-from delab_trees.main import TreeManager
+from delab_trees.main import TreeManager, get_social_media_trees
 
 
 class DelabTreeConstructionTestCase(unittest.TestCase):
@@ -102,6 +102,10 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
         # pb_vision = self.manager.get_pb_vision(tree)
         # assert pb_vision["steven"] is not None
         pass
+
+    def test_load_social_media(self):
+        manager = get_social_media_trees(context="test")
+        assert len(manager.trees) > 1000
 
 
 if __name__ == '__main__':

@@ -107,6 +107,7 @@ def get_test_tree() -> DelabTree:
     test_tree = manager.random()
     return test_tree
 
+
 def get_test_manager() -> TreeManager:
     d = {'tree_id': [1] * 4,
          'post_id': [1, 2, 3, 4],
@@ -143,3 +144,15 @@ def get_test_manager() -> TreeManager:
     manager = TreeManager(df)
     manager.initialize_trees()
     return manager
+
+
+def get_social_media_trees(platform="twitter", context="test"):
+    assert platform == "twitter" or platform == "reddit", "platform needs to be reddit or twitter!"
+    if context == "test":
+        file = "../delab_trees/data/dataset_reddit_no_text.pkl"
+    else:
+        file = "delab_trees/data/dataset_reddit_no_text.pkl"
+    file = file.replace("reddit", platform)
+    df = pd.read_pickle(file)
+    manager = TreeManager(df)
+    return manager.initialize_trees()
