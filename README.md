@@ -8,7 +8,7 @@ pip install delab_trees
 
 ## Get started
 
-Example data for Reddit and Twitter will be provided soon. 
+Example data for Reddit and Twitter are available here https://github.com/juliandehne/delab-trees/raw/main/delab_trees/data/dataset_[reddit|twitter]_no_text.pkl. 
 
 The trees are loaded from tables like this:
 
