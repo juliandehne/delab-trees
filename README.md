@@ -103,3 +103,15 @@ manager = get_test_manager()
 rb_vision_dictionary = manager.get_rb_vision() # predict an author having seen a post
 pb_vision_dictionary = manager.get_pb_vision() # predict an author to write the next post
 ```
+
+## How to cite
+
+```latex
+    @article{dehne_dtrees_23,
+    author    = {Dehne, Julian},
+    title     = {Delab-Trees, measuring delaboration in online conversations},        
+    url = {https://github.com/juliandehne/delab-trees}     
+    year      = {2023},
+}
+
+```
