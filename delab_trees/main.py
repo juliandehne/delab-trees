@@ -1,14 +1,15 @@
+import os
 import pickle
 from random import choice
 
 import pandas as pd
 
-from delab_trees.algorithms.preperation_alg_pb import prepare_pb_data
-from delab_trees.algorithms.training_alg_pb import train_pb
+from delab_trees.preperation_alg_pb import prepare_pb_data
+from delab_trees.training_alg_pb import train_pb
 from delab_trees.constants import TREE_IDENTIFIER
 from delab_trees.delab_tree import DelabTree
-from delab_trees.algorithms.preperation_alg_rb import prepare_rb_data
-from delab_trees.algorithms.training_alg_rb import train_rb
+from delab_trees.preperation_alg_rb import prepare_rb_data
+from delab_trees.training_alg_rb import train_rb
 
 
 class TreeManager:
@@ -146,12 +147,13 @@ def get_test_manager() -> TreeManager:
     return manager
 
 
-def get_social_media_trees(platform="twitter", context="test"):
+def get_social_media_trees(platform="twitter", context="production"):
     assert platform == "twitter" or platform == "reddit", "platform needs to be reddit or twitter!"
     if context == "test":
-        file = "../delab_trees/data/dataset_reddit_no_text.pkl"
+        file = "../delab_trees/data/dataset_twitter_no_text.pkl"
     else:
-        file = "delab_trees/data/dataset_reddit_no_text.pkl"
+        this_dir, this_filename = os.path.split(__file__)
+        file = os.path.join(this_dir, 'data/dataset_twitter_no_text.pkl')
     file = file.replace("reddit", platform)
     df = pd.read_pickle(file)
     manager = TreeManager(df)

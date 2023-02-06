@@ -3,7 +3,7 @@ from keras import Sequential
 from keras.layers import Dense
 from pandas import DataFrame
 
-from delab_trees.algorithms.training_alg_rb import take_features
+from delab_trees.training_alg_rb import take_features
 from sklearn.model_selection import train_test_split
 
 """
@@ -77,7 +77,6 @@ def calculate_author_predictions(df):
     combined_set, features, labels = compute_new_author_column(df)
 
     # from keras.optimizer_v2.rmsprop import RMSprop
-    from keras.optimizers.optimizer_v2 import rmsprop
     # selecting train and test datasets
     train, test = train_test_split(combined_set, test_size=0.2, shuffle=False)
     print("split training and test set")
