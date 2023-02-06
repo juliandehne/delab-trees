@@ -15,7 +15,7 @@ with open(path.join(HERE, 'README.md'), encoding='utf-8') as f:
 # This call to setup() does all the work
 setup(
     name="delab-trees",
-    version="0.1.0",
+    version="0.2.1",
     description="a library to analyse reply trees in forums and social media",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -36,6 +36,6 @@ setup(
     ],
     packages=["delab_trees"],
     include_package_data=True,
-    install_requires=["numpy", "pandas", "random", "networkx", "scikit-learn", "keras==2.9", "matplotlib",
+    install_requires=["numpy", "pandas", "networkx", "scikit-learn", "keras==2.9", "matplotlib",
                       "tensorflow==2.11.0"]
 )

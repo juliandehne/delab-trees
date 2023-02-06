@@ -109,7 +109,7 @@ pb_vision_dictionary = manager.get_pb_vision() # predict an author to write the 
 ```latex
     @article{dehne_dtrees_23,
     author    = {Dehne, Julian},
-    title     = {Delab-Trees, measuring delaboration in online conversations},        
+    title     = {Delab-Trees: measuring deliberation in online conversations},        
     url = {https://github.com/juliandehne/delab-trees}     
     year      = {2023},
 }
