@@ -4,12 +4,17 @@ from random import choice
 
 import pandas as pd
 
+from delab_trees.delab_post import DelabPost, DelabPosts
+from delab_trees.flow_duos import compute_highest_flow_delta, FLowDuo
 from delab_trees.preperation_alg_pb import prepare_pb_data
 from delab_trees.training_alg_pb import train_pb
 from delab_trees.constants import TREE_IDENTIFIER
 from delab_trees.delab_tree import DelabTree
 from delab_trees.preperation_alg_rb import prepare_rb_data
 from delab_trees.training_alg_rb import train_rb
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TreeManager:
@@ -19,9 +24,13 @@ class TreeManager:
         self.df = df
         self.initialize_trees()
 
-    def initialize_trees(self):
+    def initialize_trees(self, n=None):
         grouped_by_tree_ids = {k: v for k, v in self.df.groupby(TREE_IDENTIFIER)}
+        counter = 0
         for tree_id, df in grouped_by_tree_ids.items():
+            counter += 1
+            if n is not None and counter > n:
+                break
             tree = DelabTree(df)
             tree.as_reply_graph()
             self.trees[tree_id] = tree
@@ -147,7 +156,7 @@ def get_test_manager() -> TreeManager:
     return manager
 
 
-def get_social_media_trees(platform="twitter", context="production"):
+def get_social_media_trees(platform="twitter", n=None, context="production"):
     assert platform == "twitter" or platform == "reddit", "platform needs to be reddit or twitter!"
     if context == "test":
         file = "../delab_trees/data/dataset_twitter_no_text.pkl"
@@ -157,4 +166,4 @@ def get_social_media_trees(platform="twitter", context="production"):
     file = file.replace("reddit", platform)
     df = pd.read_pickle(file)
     manager = TreeManager(df)
-    return manager.initialize_trees()
+    return manager.initialize_trees(n)

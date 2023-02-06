@@ -27,5 +27,9 @@ class DelabPosts:
             author_id = row[TABLE.COLUMNS.AUTHOR_ID]
             created_at = row[TABLE.COLUMNS.CREATED_AT]
             post = DelabPost(post_id, parent_id, text, tree_id, author_id, created_at)
+            if "sentiment_value" in df.columns:
+                post.sentiment_value = row["sentiment_value"]
+            if "toxic_value" in df.columns:
+                post.toxic_value = row["toxic_value"]
             result.append(post)
         return result

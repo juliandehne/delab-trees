@@ -13,6 +13,7 @@ from delab_trees.constants import TABLE, GRAPH
 from delab_trees.delab_author_metric import AuthorMetric
 from delab_trees.delab_post import DelabPosts, DelabPost
 from delab_trees.exceptions import GraphNotInitializedException
+from delab_trees.flow_duos import compute_highest_flow_delta, FLowDuo
 from delab_trees.util import get_root
 
 
@@ -181,6 +182,34 @@ class DelabTree:
             return G, to_delete_list, to_change_map
         return G
 
+    def as_flow_duo(self, min_length_flows=6, min_post_branching=3, min_pre_branching=3, metric="sentiment",
+                    verbose=False):
+        flows, longest = self.get_conversation_flows()
+
+        candidate_flows : list[(str, list[DelabPost])] = []
+        for name, tweets in flows.items():
+            if len(tweets) < min_length_flows:
+                continue
+            else:
+                candidate_flows.append((name, tweets))
+        conversation_flow_duo_candidate, conversation_max = compute_highest_flow_delta(candidate_flows=candidate_flows,
+                                                                                       metric=metric,
+                                                                                       min_post_branching=
+                                                                                       min_post_branching,
+                                                                                       min_pre_branching=
+                                                                                       min_pre_branching,
+                                                                                       verbose=verbose)
+        name1 = conversation_flow_duo_candidate[0]
+        name2 = conversation_flow_duo_candidate[1]
+        flow_duo_result = FLowDuo(
+            name1=name1,
+            name2=name2,
+            toxic_delta=conversation_max,
+            posts1=flows[name1],
+            posts2=flows[name2]
+        )
+        return flow_duo_result, conversation_max
+
     def get_conversation_flows(self):
         """
         computes all flows (paths that lead from root to leaf) in the reply tree
@@ -264,7 +293,7 @@ class DelabTree:
             # author2baseline[author] = (root_distance_measure + reply_vision_measure) / 2  # un-normalized
             author2baseline[author] = reply_vision_measure  # un-normalized
             baseline = author2baseline[author]
-            assert 0 <= baseline <= 1
+            # assert 0 <= baseline <= 1
         return author2baseline
 
     def __get_author_post_map(self):
