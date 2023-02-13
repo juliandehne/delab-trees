@@ -50,8 +50,8 @@ class DelabTree:
         nx.set_node_attributes(networkx_graph, GRAPH.SUBSETS.TWEETS, name="subset")  # rename to posts
         nx.set_node_attributes(networkx_graph, node2creation, name=TABLE.COLUMNS.CREATED_AT)
         # draw the graph
-        nx.draw(networkx_graph)
-        plt.show()
+        # nx.draw(networkx_graph)
+        # plt.show()
         return networkx_graph
 
     def as_author_graph(self):
@@ -200,6 +200,8 @@ class DelabTree:
                                                                                        min_pre_branching=
                                                                                        min_pre_branching,
                                                                                        verbose=verbose)
+        if conversation_flow_duo_candidate is None:
+            return None
         name1 = conversation_flow_duo_candidate[0]
         name2 = conversation_flow_duo_candidate[1]
         flow_duo_result = FLowDuo(

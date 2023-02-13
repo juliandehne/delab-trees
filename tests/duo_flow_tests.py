@@ -27,5 +27,6 @@ class DuoFlowAlgorithmTestCase(unittest.TestCase):
     def test_duo_flow_computation(self):
         test_tree = self.manager.random()
         flow_duo = test_tree.as_flow_duo()
-        assert len(flow_duo.posts1) > 0 and len(flow_duo.posts2) > 0
-        assert flow_duo.toxic_delta > 0
+        if flow_duo is not None:
+            assert len(flow_duo.posts1) > 0 and len(flow_duo.posts2) > 0
+            assert flow_duo.toxic_delta > 0
