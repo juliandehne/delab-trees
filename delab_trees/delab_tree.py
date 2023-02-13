@@ -21,10 +21,9 @@ class DelabTree:
 
     def __init__(self, df: pd.DataFrame):
         self.df: DataFrame = deepcopy(df)
-        self.reply_graph: MultiDiGraph = None
+        self.reply_graph: MultiDiGraph = self.as_reply_graph()
         self.author_graph: MultiDiGraph = None
         self.conversation_id = self.df.iloc[0][TABLE.COLUMNS.TREE_ID]
-        # print("initialized")
 
     def branching_weight(self):
         if self.reply_graph is None:
@@ -39,19 +38,21 @@ class DelabTree:
         return len(self.df.index)
 
     def as_reply_graph(self):
-        if self.reply_graph is None:
-            node2creation = self.df.set_index(TABLE.COLUMNS.POST_ID).to_dict()[TABLE.COLUMNS.CREATED_AT]
-            df = self.df[self.df[TABLE.COLUMNS.PARENT_ID].notna()]
-            df = df.assign(label=GRAPH.LABELS.PARENT_OF)
-            networkx_graph = nx.from_pandas_edgelist(df,
-                                                     source=TABLE.COLUMNS.PARENT_ID,
-                                                     target=TABLE.COLUMNS.POST_ID,
-                                                     edge_attr='label',
-                                                     create_using=nx.MultiDiGraph())
-            nx.set_node_attributes(networkx_graph, GRAPH.SUBSETS.TWEETS, name="subset")  # rename to posts
-            nx.set_node_attributes(networkx_graph, node2creation, name=TABLE.COLUMNS.CREATED_AT)
-            self.reply_graph = networkx_graph
-        return self.reply_graph
+        df2: DataFrame = deepcopy(self.df)
+        node2creation = df2.set_index(TABLE.COLUMNS.POST_ID).to_dict()[TABLE.COLUMNS.CREATED_AT]
+        df2 = df2[df2[TABLE.COLUMNS.PARENT_ID].notna()]
+        df2 = df2.assign(label=GRAPH.LABELS.PARENT_OF)
+        networkx_graph = nx.from_pandas_edgelist(df2,
+                                                 source=TABLE.COLUMNS.PARENT_ID,
+                                                 target=TABLE.COLUMNS.POST_ID,
+                                                 edge_attr='label',
+                                                 create_using=nx.MultiDiGraph())
+        nx.set_node_attributes(networkx_graph, GRAPH.SUBSETS.TWEETS, name="subset")  # rename to posts
+        nx.set_node_attributes(networkx_graph, node2creation, name=TABLE.COLUMNS.CREATED_AT)
+        # draw the graph
+        nx.draw(networkx_graph)
+        plt.show()
+        return networkx_graph
 
     def as_author_graph(self):
         """
@@ -183,10 +184,10 @@ class DelabTree:
         return G
 
     def as_flow_duo(self, min_length_flows=6, min_post_branching=3, min_pre_branching=3, metric="sentiment",
-                    verbose=False):
+                    verbose=False) -> FLowDuo:
         flows, longest = self.get_conversation_flows()
 
-        candidate_flows : list[(str, list[DelabPost])] = []
+        candidate_flows: list[(str, list[DelabPost])] = []
         for name, tweets in flows.items():
             if len(tweets) < min_length_flows:
                 continue
@@ -208,21 +209,21 @@ class DelabTree:
             posts1=flows[name1],
             posts2=flows[name2]
         )
-        return flow_duo_result, conversation_max
+        return flow_duo_result
 
-    def get_conversation_flows(self):
+    def get_conversation_flows(self) -> (dict[str, list[DelabPost]], str):
         """
         computes all flows (paths that lead from root to leaf) in the reply tree
         :rtype: object
-        :return:
+        :return: flow_dict : str -> [DelabPost], name_of_longest : str
         """
-        reply_tree = self.reply_graph
-        root = get_root(reply_tree)
-        leaves = [x for x in reply_tree.nodes() if reply_tree.out_degree(x) == 0]
+        # reply_graph = self.as_reply_graph()
+        root = get_root(self.reply_graph)
+        leaves = [x for x in self.reply_graph.nodes() if self.reply_graph.out_degree(x) == 0]
         flows = []
         flow_dict = {}
         for leaf in leaves:
-            paths = nx.all_simple_paths(reply_tree, root, leaf)
+            paths = nx.all_simple_paths(self.reply_graph, root, leaf)
             flows.append(next(paths))
         for flow in flows:
             flow_name = str(flow[0]) + "_" + str(flow[-1])

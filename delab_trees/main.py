@@ -1,30 +1,28 @@
+import logging
 import os
 import pickle
 from random import choice
 
 import pandas as pd
 
-from delab_trees.delab_post import DelabPost, DelabPosts
-from delab_trees.flow_duos import compute_highest_flow_delta, FLowDuo
-from delab_trees.preperation_alg_pb import prepare_pb_data
-from delab_trees.training_alg_pb import train_pb
 from delab_trees.constants import TREE_IDENTIFIER
 from delab_trees.delab_tree import DelabTree
+from delab_trees.preperation_alg_pb import prepare_pb_data
 from delab_trees.preperation_alg_rb import prepare_rb_data
+from delab_trees.training_alg_pb import train_pb
 from delab_trees.training_alg_rb import train_rb
-import logging
 
 logger = logging.getLogger(__name__)
 
 
 class TreeManager:
 
-    def __init__(self, df):
+    def __init__(self, df, n=None):
         self.trees = {}
         self.df = df
-        self.initialize_trees()
+        self.__initialize_trees(n)
 
-    def initialize_trees(self, n=None):
+    def __initialize_trees(self, n=None):
         grouped_by_tree_ids = {k: v for k, v in self.df.groupby(TREE_IDENTIFIER)}
         counter = 0
         for tree_id, df in grouped_by_tree_ids.items():
@@ -32,7 +30,6 @@ class TreeManager:
             if n is not None and counter > n:
                 break
             tree = DelabTree(df)
-            tree.as_reply_graph()
             self.trees[tree_id] = tree
         return self
 
@@ -113,7 +110,7 @@ def get_test_tree() -> DelabTree:
                         pd.Timestamp('2017-01-01T04')]}
     df = pd.DataFrame(data=d)
     manager = TreeManager(df)
-    manager.initialize_trees()  # creates one tree
+    # creates one tree
     test_tree = manager.random()
     return test_tree
 
@@ -152,7 +149,6 @@ def get_test_manager() -> TreeManager:
     df_list = [df1, df2, df3, df4, df5]
     df = pd.concat(df_list, ignore_index=True)
     manager = TreeManager(df)
-    manager.initialize_trees()
     return manager
 
 
@@ -160,10 +156,11 @@ def get_social_media_trees(platform="twitter", n=None, context="production"):
     assert platform == "twitter" or platform == "reddit", "platform needs to be reddit or twitter!"
     if context == "test":
         file = "../delab_trees/data/dataset_twitter_no_text.pkl"
+        # file = "/home/dehne/PycharmProjects/delab/scriptspy/dataset_twitter_no_text.pkl"
     else:
         this_dir, this_filename = os.path.split(__file__)
         file = os.path.join(this_dir, 'data/dataset_twitter_no_text.pkl')
     file = file.replace("reddit", platform)
     df = pd.read_pickle(file)
-    manager = TreeManager(df)
-    return manager.initialize_trees(n)
+    manager = TreeManager(df, n)
+    return manager

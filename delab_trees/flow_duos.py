@@ -1,7 +1,6 @@
 import logging
 
 from delab_trees.delab_post import DelabPost
-from delab_trees.delab_tree import DelabTree
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +12,7 @@ min_pre_branching = 3
 
 class FLowDuo:
     """
-    This class represents a couple of two Conversatoin Flows (reply chains from root to leaf) that
+    This class represents a couple of two Conversation Flows (reply chains from root to leaf) that
     have a big difference in given measures such as sentiment or toxicity
     """
 

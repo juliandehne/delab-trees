@@ -9,6 +9,8 @@ pip install delab_trees
 ## Get started
 
 Example data for Reddit and Twitter are available here https://github.com/juliandehne/delab-trees/raw/main/delab_trees/data/dataset_[reddit|twitter]_no_text.pkl. 
+The data is structure only. Ids, text, links, or other information that would break confidentiality of the academic 
+access have been omitted.
 
 The trees are loaded from tables like this:
 
@@ -42,7 +44,7 @@ d = {'tree_id': [1] * 4,
                     pd.Timestamp('2017-01-01T04')]}
 df = pd.DataFrame(data=d)
 manager = TreeManager(df) 
-manager.initialize_trees() # creates one tree
+# creates one tree
 test_tree = manager.random()
 ```
 
@@ -89,8 +91,7 @@ d = {'tree_id': [1] * 4,
                     pd.Timestamp('2017-01-01T03'),
                     pd.Timestamp('2017-01-01T04')]}
 df = pd.DataFrame(data=d)
-manager = TreeManager(df) 
-manager.initialize_trees() # creates one tree
+manager = TreeManager(df) # creates one tree
 rb_vision_dictionary : dict["tree_id", dict["author_id", "vision_metric"]] = manager.get_rb_vision()
 ```
 

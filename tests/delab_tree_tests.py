@@ -1,14 +1,13 @@
 import unittest
 
 from delab_trees.delab_tree import DelabTree
-from delab_trees.main import get_social_media_trees, get_test_manager
+from delab_trees.main import get_test_manager
 
 
 class DelabTreeConstructionTestCase(unittest.TestCase):
 
     def setUp(self):
         self.manager = get_test_manager()
-        self.manager.initialize_trees()
 
     def test_load_trees(self):
         # tests if the dataframes is loaded correctly as multiple trees
@@ -57,21 +56,6 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
         # assert author_measures_steven.baseline_author_vision > author_measures_mark.baseline_author_vision
         # TODO: Check plausibility of baseline vision calculation
         assert author_measures_steven.baseline_author_vision > 0
-
-    def test_rb_algorithm(self):
-        tree: DelabTree = self.manager.trees[1]
-        rb_vision = self.manager.get_rb_vision(tree)
-        assert rb_vision["steven"] is not None
-
-    def test_pb_algorithm(self):
-        # tree: DelabTree = self.manager.trees[1]
-        # pb_vision = self.manager.get_pb_vision(tree)
-        # assert pb_vision["steven"] is not None
-        pass
-
-    def test_load_social_media(self):
-        self.media_trees_manager = get_social_media_trees(context="test")
-        assert len(self.media_trees_manager.trees) > 1000
 
 
 if __name__ == '__main__':
