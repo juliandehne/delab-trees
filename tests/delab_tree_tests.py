@@ -20,6 +20,10 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
         test_tree: DelabTree = self.manager.random()
         assert test_tree.total_number_of_posts() == 4
         assert test_tree.average_branching_factor() > 0
+        test_tree2: DelabTree = self.manager.trees[1]
+        assert test_tree2.root_dominance() == 0.25
+        test_tree3: DelabTree = self.manager.trees[4]
+        assert test_tree3.root_dominance() == 0.75
         # print("\n\nNOTES: ")
         # print("the branching weight is {}".format(test_tree.branching_weight()))
         # print("the avg branching factor is {}".format(test_tree.average_branching_factor()))

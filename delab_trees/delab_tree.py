@@ -20,6 +20,19 @@ from delab_trees.util import get_root
 class DelabTree:
 
     def __init__(self, df: pd.DataFrame):
+        """
+        Assumes the following columns as a pandas df:
+        (see constants.py)
+        class TABLE:
+            class COLUMNS:
+                PARENT_ID = "parent_id"
+                CREATED_AT = "created_at"
+                AUTHOR_ID = "author_id"
+                TEXT = "text"
+                POST_ID = "post_id"
+                TREE_ID = "tree_id"
+        :param df:
+        """
         self.df: DataFrame = deepcopy(df)
         self.reply_graph: MultiDiGraph = self.as_reply_graph()
         self.author_graph: MultiDiGraph = None
@@ -33,6 +46,14 @@ class DelabTree:
     def average_branching_factor(self):
         result = 2 * self.reply_graph.number_of_edges() / self.reply_graph.number_of_nodes()
         return result
+
+    def root_dominance(self):
+        root_node = get_root(self.reply_graph)
+        root_author = self.df[self.df[TABLE.COLUMNS.POST_ID] == root_node][TABLE.COLUMNS.AUTHOR_ID]
+        root_author = list(root_author)[0]
+        self.df["is_root"] = self.df[TABLE.COLUMNS.AUTHOR_ID] == root_author
+        root_dominance = self.df["is_root"].sum() / len(self.df.index)
+        return root_dominance
 
     def total_number_of_posts(self):
         return len(self.df.index)
