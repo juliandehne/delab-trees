@@ -4,6 +4,7 @@ import pickle
 from random import choice
 
 import pandas as pd
+from tqdm import tqdm
 
 from delab_trees.constants import TREE_IDENTIFIER
 from delab_trees.delab_tree import DelabTree
@@ -40,6 +41,18 @@ class TreeManager:
     def random(self) -> DelabTree:
         assert len(self.trees.keys()) >= 1
         return self.trees[choice(list(self.trees.keys()))]
+
+    def validate(self):
+        for tree_id, tree in tqdm(self.trees.items()):
+            assert tree.validate(), "Tree with id {} is not valid".format(tree_id)
+
+    def remove_invalid(self):
+        to_remove = []
+        for tree_id, tree in tqdm(self.trees.items()):
+            if not tree.validate(verbose=False):
+                to_remove.append(tree_id)
+        for elem in to_remove:
+            self.trees.pop(elem)
 
     def __prepare_rb_model(self, prepared_data_filepath):
         """
@@ -152,7 +165,7 @@ def get_test_manager() -> TreeManager:
     return manager
 
 
-def get_social_media_trees(platform="twitter", n=None, context="production"):
+def get_social_media_trees(platform="twitter", n=None, context="production") -> TreeManager:
     assert platform == "twitter" or platform == "reddit", "platform needs to be reddit or twitter!"
     if context == "test":
         file = "../delab_trees/data/dataset_twitter_no_text.pkl"
@@ -164,3 +177,7 @@ def get_social_media_trees(platform="twitter", n=None, context="production"):
     df = pd.read_pickle(file)
     manager = TreeManager(df, n)
     return manager
+
+
+def hello_world():
+    print("hello world 3")

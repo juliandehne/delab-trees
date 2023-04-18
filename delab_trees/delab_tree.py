@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import pandas as pd
-from networkx import MultiDiGraph
+from networkx import MultiDiGraph, NetworkXPointlessConcept
 from networkx.drawing.nx_pydot import graphviz_layout
 from pandas import DataFrame
 
@@ -141,6 +141,30 @@ class DelabTree:
         # The recursive Tree has the tostring and toxml implemented
         pass
 
+    def as_biggest_connected_tree(self):
+        """
+        if there are faulty trees you can use this to approximate the biggest tree
+        :return:
+        """
+        # create a graph
+        G = self.reply_graph
+
+        # initialize variables to keep track of the largest tree found so far
+        largest_tree_size = 0
+        largest_tree = None
+
+        # iterate over the connected components of the graph
+        for component in nx.connected_components(G):
+            # check if the component has the tree property
+            if nx.is_tree(G.subgraph(component)):
+                # calculate the size of the tree
+                tree_size = nx.number_of_nodes(G.subgraph(component))
+                # update the largest tree found so far
+                if tree_size > largest_tree_size:
+                    largest_tree_size = tree_size
+                    largest_tree = component
+        return largest_tree
+
     def as_merged_self_answers_graph(self, return_deleted=False):
         """
         subsequent posts of the same author are merged into one post
@@ -157,7 +181,7 @@ class DelabTree:
         for row_index in posts_df.index.values:
             # we are not touching the root
             author_id, parent_author_id, parent_id, post_id = self.__get_table_row_as_names(posts_df, row_index)
-            if parent_id is None or np.isnan(parent_id):
+            if parent_id is None:
                 continue
             # if a tweet is merged, ignore
             if post_id in to_delete_list:
@@ -188,7 +212,7 @@ class DelabTree:
         post_ids = list(posts_df.loc[row_indexes2][TABLE.COLUMNS.POST_ID])
         for row_index2 in row_indexes2:
             author_id, parent_author_id, parent_id, post_id = self.__get_table_row_as_names(posts_df, row_index2)
-            if parent_id is not None and not np.isnan(parent_id):
+            if parent_id is not None:
                 # if parent_id not in post_ids and parent_id not in to_delete_list:
                 #     print("conversation {} has no root_node".format(self.conversation_id))
                 if post_id in to_change_map:
@@ -356,3 +380,19 @@ class DelabTree:
         nx.draw_networkx_labels(tree, pos)
         nx.draw(tree, pos)
         plt.show()
+
+    def validate(self, verbose=True):
+        try:
+            if nx.is_tree(self.reply_graph):
+                if verbose:
+                    print("The graph is a valid tree.")
+                return True
+            else:
+                if verbose:
+                    print("The graph is not a valid tree.")
+                    nx.draw(self.reply_graph)
+                    plt.show()
+                return False
+        except NetworkXPointlessConcept:
+            print("The graph is not a valid tree.")
+            return False

@@ -5,4 +5,4 @@ scikit-learn
 matplotlib~=3.4.3
 tensorflow==2.11.0
 keras==2.11.0
-pytest==6.2.5
+pytest
