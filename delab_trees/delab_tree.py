@@ -142,6 +142,11 @@ class DelabTree:
         pass
 
     def as_merged_self_answers_graph(self, return_deleted=False):
+        """
+        subsequent posts of the same author are merged into one post
+        :param return_deleted:
+        :return:
+        """
         posts_df = self.df[[TABLE.COLUMNS.POST_ID,
                             TABLE.COLUMNS.AUTHOR_ID,
                             TABLE.COLUMNS.CREATED_AT,
@@ -199,7 +204,7 @@ class DelabTree:
         G.add_edges_from(edges, label=GRAPH.LABELS.PARENT_OF)
         nx.set_node_attributes(G, GRAPH.SUBSETS.TWEETS, name="subset")
         # return G, to_delete_list, changed_nodes
-        print("removed {} and changed {}".format(to_delete_list, to_change_map))
+        # print("removed {} and changed {}".format(to_delete_list, to_change_map))
         if return_deleted:
             return G, to_delete_list, to_change_map
         return G
