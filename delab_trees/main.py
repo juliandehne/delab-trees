@@ -3,6 +3,7 @@ import os
 import pickle
 from random import choice
 
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
@@ -21,7 +22,21 @@ class TreeManager:
     def __init__(self, df, n=None):
         self.trees = {}
         self.df = df
+        self.__pre_process_df()
         self.__initialize_trees(n)
+
+    def internal_hello_world(self):
+        print("hello world internal 3" + str(self.df.shape))
+
+    def __pre_process_df(self):
+        """
+        convert float ids to int64
+        :return:
+        """
+        df_parent_view = self.df.loc[:, "parent_id"]
+        self.df.loc[:, "parent_id"] = df_parent_view.astype(float).astype(str)
+        df_post_view = self.df.loc[:, "post_id"]
+        self.df.loc[:, "post_id"] = df_post_view.astype(float).astype(str)
 
     def __initialize_trees(self, n=None):
         grouped_by_tree_ids = {k: v for k, v in self.df.groupby(TREE_IDENTIFIER)}
@@ -36,15 +51,28 @@ class TreeManager:
 
     def single(self) -> DelabTree:
         assert len(self.trees.keys()) == 1, "There needs to be exactly one tree in the manager!"
-        return self.trees[self.trees.keys()[0]]
+        first_key = list(self.trees.keys())[0]
+        return self.trees[first_key]
 
     def random(self) -> DelabTree:
         assert len(self.trees.keys()) >= 1
         return self.trees[choice(list(self.trees.keys()))]
 
-    def validate(self):
+    def validate(self, verbose=True):
+        assert self.df["post_id"].notnull().all(), "post_ids should not be null"
+
+        parents = set(list(self.df["parent_id"]))
+        posts = set(list(self.df["post_id"]))
+        missing_parents = parents - posts.intersection(parents)
+
+        assert len(missing_parents) == 1, "all parent ids except NAN should be contained in the post id column"
+
+        tree: DelabTree
         for tree_id, tree in tqdm(self.trees.items()):
-            assert tree.validate(), "Tree with id {} is not valid".format(tree_id)
+            is_valid = tree.validate(verbose)
+            assert is_valid, "Tree with id {} is not valid".format(tree_id)
+            if not is_valid:
+                break
 
     def remove_invalid(self):
         to_remove = []
@@ -180,4 +208,4 @@ def get_social_media_trees(platform="twitter", n=None, context="production") -> 
 
 
 def hello_world():
-    print("hello world 3")
+    print("hello world 9")

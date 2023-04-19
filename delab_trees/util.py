@@ -12,7 +12,7 @@ def get_root(conversation_graph: nx.DiGraph):  # tree rooted at 0
     """
     roots = [n for n, d in conversation_graph.in_degree() if d == 0]
     if len(roots) != 1:
-        raise NotATreeException()
+        raise NotATreeException(message=roots)
     return roots[0]
 
 
@@ -54,3 +54,16 @@ def get_path(post_id, conversation_graph: nx.DiGraph, min_path_length=3, require
     if current_best_path_index is None:
         return None
     return paths[current_best_path_index]
+
+
+def convert_float_ids_to_readable_str(string_num):
+    # convert the string to a floating-point number
+    float_num = float(string_num)
+
+    # convert the floating-point number to an integer
+    int_num = int(float_num)
+
+    # convert the integer back to a string
+    str_num = str(int_num)
+
+    return str_num

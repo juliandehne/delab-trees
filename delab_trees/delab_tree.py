@@ -14,7 +14,7 @@ from delab_trees.delab_author_metric import AuthorMetric
 from delab_trees.delab_post import DelabPosts, DelabPost
 from delab_trees.exceptions import GraphNotInitializedException
 from delab_trees.flow_duos import compute_highest_flow_delta, FLowDuo
-from delab_trees.util import get_root
+from delab_trees.util import get_root, convert_float_ids_to_readable_str
 
 
 class DelabTree:
@@ -390,7 +390,18 @@ class DelabTree:
             else:
                 if verbose:
                     print("The graph is not a valid tree.")
-                    nx.draw(self.reply_graph)
+                    # create a new dictionary of nodes with truncated labels
+                    new_labels = {node: convert_float_ids_to_readable_str(node)[-3:] for node in self.reply_graph.nodes}
+
+                    # create a new figure with a larger canvas
+                    fig, ax = plt.subplots(figsize=(8, 6))
+
+                    # create a new graph with truncated labels
+                    G_truncated = nx.relabel_nodes(self.reply_graph, new_labels)
+                    pos = nx.spring_layout(G_truncated, k=1.5)
+                    nx.draw_networkx_nodes(G_truncated, pos=pos, node_size=600, node_color='blue')
+                    nx.draw_networkx_edges(G_truncated, pos=pos, width=2)
+                    nx.draw_networkx_labels(G_truncated, pos=pos, font_color='white')
                     plt.show()
                 return False
         except NetworkXPointlessConcept:
