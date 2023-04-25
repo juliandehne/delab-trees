@@ -12,6 +12,9 @@ class DelabPost:
         self.author_id = author_id
         self.created_at = created_at
 
+    def __str__(self):
+        return self.text
+
 
 class DelabPosts:
 
