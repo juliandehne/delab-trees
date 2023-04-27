@@ -1,3 +1,4 @@
+import statistics
 from collections import defaultdict
 from copy import deepcopy
 
@@ -309,6 +310,20 @@ class DelabTree:
             result[author_id] = metric
 
         return result
+
+    def get_average_author_metrics(self):
+        """
+        computes the same metrics as for specific authors but as the average of all authors in the graph
+        :return:
+        """
+        # calculate the degree centrality of each node
+        g = self.as_author_interaction_graph()
+        closeness_centrality = statistics.mean(nx.closeness_centrality(g).values())
+        katz_centrality = statistics.mean(nx.katz_centrality(g).values())
+        betweenness_centrality = statistics.mean(nx.betweenness_centrality(g))
+        baseline_author_vision = statistics.mean(self.get_baseline_author_vision())
+        metric = AuthorMetric(closeness_centrality,betweenness_centrality, katz_centrality, baseline_author_vision)
+        return metric
 
     def get_baseline_author_vision(self):
         author2baseline = {}

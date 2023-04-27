@@ -1,13 +1,16 @@
+import inspect
 import logging
 import os
 import pickle
 from random import choice
+from statistics import mean
 
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
 from delab_trees.constants import TREE_IDENTIFIER
+from delab_trees.delab_author_metric import AuthorMetric
 from delab_trees.delab_tree import DelabTree
 from delab_trees.preperation_alg_pb import prepare_pb_data
 from delab_trees.preperation_alg_rb import prepare_rb_data
@@ -73,6 +76,35 @@ class TreeManager:
             assert is_valid, "Tree with id {} is not valid".format(tree_id)
             if not is_valid:
                 break
+
+    def get_mean_author_metrics(self):
+        sig = inspect.signature(AuthorMetric.__init__)
+        parameters = {key: value for key, value in sig.parameters.items() if key not in ['self', 'args', 'kwargs']}
+        metric_names = list(parameters.keys())
+
+        assert len(metric_names) > 0, "AuthorMetric should contain one user written attr at least"
+
+        treeid2metrics = {}
+        for tree_id, tree in self.trees.items():
+            # m_author = tree_id2m_author_id[tree_id]
+            tree_metrics = tree.get_author_metrics()
+            treeid2metrics[tree_id] = tree_metrics
+
+        metrics = treeid2metrics.values()
+        assert len(metrics) > 0
+
+        def get_mean_metric(metric_name):
+            katz_centralise = []
+            for author2metric in metrics:
+                a_metrics = author2metric.values()
+                for a_metric in a_metrics:
+                    single_measure = getattr(a_metric, metric_name)
+                    katz_centralise.append(single_measure)
+            m_katz_centrality = mean(katz_centralise)
+            return m_katz_centrality
+
+        result = {name: get_mean_metric(name) for name in metric_names}
+        return result
 
     def remove_invalid(self):
         to_remove = []
