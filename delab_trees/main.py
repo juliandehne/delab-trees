@@ -29,17 +29,21 @@ class TreeManager:
         self.__initialize_trees(n)
 
     def internal_hello_world(self):
-        print("hello world internal 3" + str(self.df.shape))
+        print("hello world internal 5" + str(self.df.shape))
 
     def __pre_process_df(self):
         """
-        convert float ids to int64
+        convert float ids to str
         :return:
         """
-        df_parent_view = self.df.loc[:, "parent_id"]
-        self.df.loc[:, "parent_id"] = df_parent_view.astype(float).astype(str)
-        df_post_view = self.df.loc[:, "post_id"]
-        self.df.loc[:, "post_id"] = df_post_view.astype(float).astype(str)
+        if self.df["parent_id"].dtype != "object" and self.df["post_id"].dtype != "object":
+            df_parent_view = self.df.loc[:, "parent_id"]
+            self.df.loc[:, "parent_id"] = df_parent_view.astype(float).astype(str)
+            df_post_view = self.df.loc[:, "post_id"]
+            self.df.loc[:, "post_id"] = df_post_view.astype(float).astype(str)
+        else:
+            assert self.df["parent_id"].dtype == "object" and self.df[
+                "post_id"].dtype == "object", "post_id and parent_id need to be both float or str"
 
     def __initialize_trees(self, n=None):
         grouped_by_tree_ids = {k: v for k, v in self.df.groupby(TREE_IDENTIFIER)}
@@ -67,6 +71,9 @@ class TreeManager:
         parents = set(list(self.df["parent_id"]))
         posts = set(list(self.df["post_id"]))
         missing_parents = parents - posts.intersection(parents)
+
+        if len(missing_parents) != 1:
+            print("the following parents are not contained in the id column:", list(missing_parents)[:5])
 
         assert len(missing_parents) == 1, "all parent ids except NAN should be contained in the post id column"
 
@@ -113,6 +120,8 @@ class TreeManager:
                 to_remove.append(tree_id)
         for elem in to_remove:
             self.trees.pop(elem)
+            #self.df = self.df.drop(self.df[self.df['tree_id'] == elem].index)
+        self.df.drop(self.df['tree_id'].isin(to_remove).index)
 
     def __prepare_rb_model(self, prepared_data_filepath):
         """
