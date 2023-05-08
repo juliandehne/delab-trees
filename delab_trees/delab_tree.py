@@ -62,6 +62,7 @@ class DelabTree:
     def as_reply_graph(self):
         df2: DataFrame = deepcopy(self.df)
         node2creation = df2.set_index(TABLE.COLUMNS.POST_ID).to_dict()[TABLE.COLUMNS.CREATED_AT]
+        df2 = df2[df2[TABLE.COLUMNS.PARENT_ID] != 'nan']
         df2 = df2[df2[TABLE.COLUMNS.PARENT_ID].notna()]
         df2 = df2.assign(label=GRAPH.LABELS.PARENT_OF)
         networkx_graph = nx.from_pandas_edgelist(df2,
@@ -322,7 +323,7 @@ class DelabTree:
         katz_centrality = statistics.mean(nx.katz_centrality(g).values())
         betweenness_centrality = statistics.mean(nx.betweenness_centrality(g))
         baseline_author_vision = statistics.mean(self.get_baseline_author_vision())
-        metric = AuthorMetric(closeness_centrality,betweenness_centrality, katz_centrality, baseline_author_vision)
+        metric = AuthorMetric(closeness_centrality, betweenness_centrality, katz_centrality, baseline_author_vision)
         return metric
 
     def get_baseline_author_vision(self):

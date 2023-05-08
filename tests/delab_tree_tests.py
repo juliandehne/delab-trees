@@ -61,6 +61,9 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
         # TODO: Check plausibility of baseline vision calculation
         assert author_measures_steven.baseline_author_vision > 0
 
+    def test_validated(self):  #
+        assert self.manager.validate(verbose=True)
+
 
 if __name__ == '__main__':
     unittest.main()

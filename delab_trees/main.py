@@ -33,13 +33,14 @@ class TreeManager:
 
     def __pre_process_df(self):
         """
-        convert float ids to str
+        convert float and int ids to str
         :return:
         """
+
         if self.df["parent_id"].dtype != "object" and self.df["post_id"].dtype != "object":
             df_parent_view = self.df.loc[:, "parent_id"]
-            self.df.loc[:, "parent_id"] = df_parent_view.astype(float).astype(str)
             df_post_view = self.df.loc[:, "post_id"]
+            self.df.loc[:, "parent_id"] = df_parent_view.astype(float).astype(str)
             self.df.loc[:, "post_id"] = df_post_view.astype(float).astype(str)
         else:
             assert self.df["parent_id"].dtype == "object" and self.df[
@@ -83,6 +84,7 @@ class TreeManager:
             assert is_valid, "Tree with id {} is not valid".format(tree_id)
             if not is_valid:
                 break
+        return True
 
     def get_mean_author_metrics(self):
         sig = inspect.signature(AuthorMetric.__init__)
