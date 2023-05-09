@@ -97,3 +97,5 @@ def paint_bipartite(G2, black_edges, red_edges, root_node):
 
 def pd_is_nan(parent_id):
     return parent_id is None or parent_id == 'nan' or pd.isna(parent_id)
+
+

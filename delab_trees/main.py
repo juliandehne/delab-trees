@@ -16,6 +16,9 @@ from delab_trees.preperation_alg_pb import prepare_pb_data
 from delab_trees.preperation_alg_rb import prepare_rb_data
 from delab_trees.training_alg_pb import train_pb
 from delab_trees.training_alg_rb import train_rb
+import multiprocessing
+from multiprocessing import Pool
+from functools import partial
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +26,7 @@ logger = logging.getLogger(__name__)
 class TreeManager:
 
     def __init__(self, df, n=None):
+        self.num_cpus = max(multiprocessing.cpu_count() - 2, 1)
         self.trees = {}
         self.df = df
         self.__pre_process_df()
@@ -47,14 +51,31 @@ class TreeManager:
                 "post_id"].dtype == "object", "post_id and parent_id need to be both float or str"
 
     def __initialize_trees(self, n=None):
+        print("loading data into manager and converting table into trees...")
         grouped_by_tree_ids = {k: v for k, v in self.df.groupby(TREE_IDENTIFIER)}
-        counter = 0
-        for tree_id, df in grouped_by_tree_ids.items():
-            counter += 1
-            if n is not None and counter > n:
-                break
-            tree = DelabTree(df)
-            self.trees[tree_id] = tree
+
+        if n is not None and n < self.num_cpus:
+            # cannot parallelize if the n of wanted trees is less then the cpus to be used
+            trees_result = create_trees_from_grouped(n, grouped_by_tree_ids)
+            self.trees = trees_result
+        else:
+
+            # compute the trees in parallel, n will be ignored until later
+            # num_splits = self.num_cpus
+            num_splits = len(grouped_by_tree_ids)
+
+            # Split the dictionary into a list of sub-dictionaries
+            sub_dicts = np.array_split(list(grouped_by_tree_ids.items()), num_splits)
+
+            # Convert each sub-list into a dictionary and put them in a list
+            list_of_groupings = [dict(sub_dict) for sub_dict in sub_dicts]
+
+            with Pool(self.num_cpus) as p:
+                # use the imap_unordered function to parallelize the loop
+                for tree_group in tqdm(p.imap_unordered(create_trees_from_grouped_helper, list_of_groupings),
+                                       total=num_splits):
+                    self.trees.update(tree_group)
+
         return self
 
     def single(self) -> DelabTree:
@@ -122,7 +143,7 @@ class TreeManager:
                 to_remove.append(tree_id)
         for elem in to_remove:
             self.trees.pop(elem)
-            #self.df = self.df.drop(self.df[self.df['tree_id'] == elem].index)
+            # self.df = self.df.drop(self.df[self.df['tree_id'] == elem].index)
         self.df.drop(self.df['tree_id'].isin(to_remove).index)
 
     def __prepare_rb_model(self, prepared_data_filepath):
@@ -252,3 +273,19 @@ def get_social_media_trees(platform="twitter", n=None, context="production") -> 
 
 def hello_world():
     print("hello world 9")
+
+
+def create_trees_from_grouped(n_trees, groupings):
+    trees = {}
+    counter = 0
+    for tree_id, df in groupings.items():
+        counter += 1
+        if n_trees is not None and counter > n_trees:
+            break
+        tree = DelabTree(df)
+        trees[tree_id] = tree
+    return trees
+
+
+def create_trees_from_grouped_helper(groupings):
+    return create_trees_from_grouped(None, groupings)
