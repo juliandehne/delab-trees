@@ -1,5 +1,8 @@
 import unittest
 
+import matplotlib.pyplot as plt
+import networkx as nx
+
 from delab_trees.delab_tree import DelabTree
 from delab_trees.main import get_test_manager
 
@@ -39,7 +42,7 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
         assert len(merged_graph.edges()) == 1
         # print(merged_graph.edges(data=True))
         tree2: DelabTree = self.manager.trees[5]
-        merged_graph2 = tree2.as_merged_self_answers_graph()
+        merged_graph2 : DelabTree = tree2.as_merged_self_answers_graph()
         assert len(merged_graph2.edges()) == 1
 
     def test_flow_computation(self):

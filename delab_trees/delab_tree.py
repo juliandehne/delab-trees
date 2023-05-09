@@ -15,7 +15,7 @@ from delab_trees.delab_author_metric import AuthorMetric
 from delab_trees.delab_post import DelabPosts, DelabPost
 from delab_trees.exceptions import GraphNotInitializedException
 from delab_trees.flow_duos import compute_highest_flow_delta, FLowDuo
-from delab_trees.util import get_root, convert_float_ids_to_readable_str
+from delab_trees.util import get_root, convert_float_ids_to_readable_str, paint_bipartite_author_graph, pd_is_nan
 
 
 class DelabTree:
@@ -183,7 +183,8 @@ class DelabTree:
         for row_index in posts_df.index.values:
             # we are not touching the root
             author_id, parent_author_id, parent_id, post_id = self.__get_table_row_as_names(posts_df, row_index)
-            if parent_id is None:
+            # we need to assume that parent_id as a str can be converted to nan
+            if pd_is_nan(parent_id):
                 continue
             # if a tweet is merged, ignore
             if post_id in to_delete_list:
@@ -201,7 +202,7 @@ class DelabTree:
                     # we can make this assertion because we did not delete the root
                     moving_author_id, moving_parent_author_id, moving_parent_id, moving_post_id = \
                         self.__get_table_row_as_names(posts_df, current)
-                    assert moving_parent_id is not None
+                    assert moving_parent_id is not None and moving_parent_id != 'nan'
                     current = posts_df.index[posts_df[TABLE.COLUMNS.POST_ID] == moving_parent_id].values[0]
                 if moving_post_id != post_id:
                     to_change_map[post_id] = moving_parent_id
@@ -214,7 +215,7 @@ class DelabTree:
         post_ids = list(posts_df.loc[row_indexes2][TABLE.COLUMNS.POST_ID])
         for row_index2 in row_indexes2:
             author_id, parent_author_id, parent_id, post_id = self.__get_table_row_as_names(posts_df, row_index2)
-            if parent_id is not None:
+            if not(pd_is_nan(parent_id)):
                 # if parent_id not in post_ids and parent_id not in to_delete_list:
                 #     print("conversation {} has no root_node".format(self.conversation_id))
                 if post_id in to_change_map:
@@ -396,6 +397,11 @@ class DelabTree:
         nx.draw_networkx_labels(tree, pos)
         nx.draw(tree, pos)
         plt.show()
+
+    def paint_author_graph(self):
+        tree = self.as_author_graph()
+        root = get_root(self.as_reply_graph())
+        paint_bipartite_author_graph(tree, root)
 
     def validate(self, verbose=True):
         try:

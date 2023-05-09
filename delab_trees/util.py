@@ -1,8 +1,11 @@
 import itertools
 
 import networkx as nx
+import pandas as pd
+from matplotlib import pyplot as plt
 
 from delab_trees.exceptions import NotATreeException
+from networkx.drawing.nx_pydot import graphviz_layout
 
 
 def get_root(conversation_graph: nx.DiGraph):  # tree rooted at 0
@@ -67,3 +70,30 @@ def convert_float_ids_to_readable_str(string_num):
     str_num = str(int_num)
 
     return str_num
+
+
+def paint_bipartite_author_graph(G2, root_node):
+    # Specify the edges you want here
+    red_edges = [(source, target, attr) for source, target, attr in G2.edges(data=True) if
+                 attr['label'] == 'author_of']
+    # edge_colours = ['black' if edge not in red_edges else 'red'
+    #                for edge in G2.edges()]
+    black_edges = [edge for edge in G2.edges(data=True) if edge not in red_edges]
+    # Need to create a layout when doing
+    # separate calls to draw nodes and edges
+    paint_bipartite(G2, black_edges, red_edges, root_node=root_node)
+
+
+def paint_bipartite(G2, black_edges, red_edges, root_node):
+    # pos = nx.multipartite_layout(G2)
+
+    pos = graphviz_layout(G2, prog="twopi", root=root_node)
+    nx.draw_networkx_nodes(G2, pos, node_size=400)
+    nx.draw_networkx_labels(G2, pos)
+    nx.draw_networkx_edges(G2, pos, edgelist=red_edges, edge_color='red', arrows=True)
+    nx.draw_networkx_edges(G2, pos, edgelist=black_edges, arrows=True)
+    plt.show()
+
+
+def pd_is_nan(parent_id):
+    return parent_id is None or parent_id == 'nan' or pd.isna(parent_id)
