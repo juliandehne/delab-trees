@@ -13,10 +13,19 @@ def get_root(conversation_graph: nx.DiGraph):  # tree rooted at 0
     :param conversation_graph:
     :return: the root node of a nx graph that is a tree
     """
-    roots = [n for n, d in conversation_graph.in_degree() if d == 0]
+    roots = get_all_roots(conversation_graph)
     if len(roots) != 1:
         raise NotATreeException(message=roots)
     return roots[0]
+
+
+def get_all_roots(conversation_graph: nx.DiGraph):  # tree rooted at 0
+    """
+    :param conversation_graph:
+    :return: the root nodes of a nx graph (no incoming edges)
+    """
+    roots = [n for n, d in conversation_graph.in_degree() if d == 0]
+    return roots
 
 
 def get_all_reply_paths(conversation_graph: nx.DiGraph, min_path_length, required_max_path_length):
@@ -60,6 +69,9 @@ def get_path(post_id, conversation_graph: nx.DiGraph, min_path_length=3, require
 
 
 def convert_float_ids_to_readable_str(string_num):
+    if isinstance(string_num, str):
+        return string_num
+
     # convert the string to a floating-point number
     float_num = float(string_num)
 
@@ -96,6 +108,18 @@ def paint_bipartite(G2, black_edges, red_edges, root_node):
 
 
 def pd_is_nan(parent_id):
-    return parent_id is None or parent_id == 'nan' or pd.isna(parent_id)
+    if isinstance(parent_id, pd.Series):
+        return parent_id.apply(lambda x: pd_is_nan(x))
+    result = parent_id is None or parent_id == 'nan' or pd.isna(parent_id) or parent_id == "NA"
+    if result:
+        pass
+    return result
 
 
+def get_missing_parents(df):
+    parents = set(list(df["parent_id"]))
+    posts = set(list(df["post_id"]))
+    intersection = posts.intersection(parents)
+    missing_parent_ids = parents - intersection
+    missing_parent_ids_no_nan = list(filter(lambda x: not (pd_is_nan(x)), missing_parent_ids))
+    return missing_parent_ids_no_nan

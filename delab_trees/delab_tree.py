@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import pandas as pd
-from networkx import MultiDiGraph, NetworkXPointlessConcept
+from networkx import MultiDiGraph, NetworkXPointlessConcept, NetworkXNoCycle
 from networkx.drawing.nx_pydot import graphviz_layout
 from pandas import DataFrame
 
@@ -15,7 +15,8 @@ from delab_trees.delab_author_metric import AuthorMetric
 from delab_trees.delab_post import DelabPosts, DelabPost
 from delab_trees.exceptions import GraphNotInitializedException
 from delab_trees.flow_duos import compute_highest_flow_delta, FLowDuo
-from delab_trees.util import get_root, convert_float_ids_to_readable_str, paint_bipartite_author_graph, pd_is_nan
+from delab_trees.util import get_root, convert_float_ids_to_readable_str, paint_bipartite_author_graph, pd_is_nan, \
+    get_missing_parents
 
 
 class DelabTree:
@@ -38,6 +39,10 @@ class DelabTree:
         self.reply_graph: MultiDiGraph = self.as_reply_graph()
         self.author_graph: MultiDiGraph = None
         self.conversation_id = self.df.iloc[0][TABLE.COLUMNS.TREE_ID]
+
+    def __update_df(self):
+        post_ids = self.reply_graph.nodes
+        self.df = self.df[self.df["post_id"].isin(post_ids)]
 
     def branching_weight(self):
         if self.reply_graph is None:
@@ -143,9 +148,10 @@ class DelabTree:
         # The recursive Tree has the tostring and toxml implemented
         pass
 
-    def as_biggest_connected_tree(self):
+    def as_biggest_connected_tree(self, stateless=True):
         """
         if there are faulty trees you can use this to approximate the biggest tree
+        :param stateless: if not true, returns the DelabTree as a new object
         :return:
         """
         # create a graph
@@ -165,11 +171,101 @@ class DelabTree:
                 if tree_size > largest_tree_size:
                     largest_tree_size = tree_size
                     largest_tree = component
+        if not stateless:
+            self.reply_graph = largest_tree
+            self.__update_df()
+            return self
         return largest_tree
 
-    def as_merged_self_answers_graph(self, return_deleted=False):
+    def as_removed_cycles(self, as_delab_tree=True):
+        """
+        remove cycles in graph and return minimum spanning arborescence
+        :param as_delab_tree: if True will return a new DelabTree object instead of the edited graph
+        :return:
+        """
+        if nx.is_weakly_connected(self.reply_graph):
+            G = self.reply_graph
+            # find all the simple cycles in the graph
+            cycles = list(nx.simple_cycles(G))
+
+            # remove the edges that belong to the cycles
+            for cycle in cycles:
+                for i in range(len(cycle)):
+                    G.remove_edge(cycle[i], cycle[(i + 1) % len(cycle)])
+
+            # find the minimum spanning arborescence of the graph
+            T = nx.minimum_spanning_arborescence(G)
+
+            if not as_delab_tree:
+                return T
+            else:
+                new_df = self.df[self.df[["parent_id", "post_id"]]
+                    .apply(tuple, axis=1).isin(T.edges())]
+
+                roots = [n for n, d in T.in_degree() if d == 0]
+                root_node_id = roots[0]
+                root_row = self.df[self.df["post_id"] == root_node_id]
+                root_row = root_row.head(1)
+                root_row["parent_id"] = 'nan'
+
+                result = DelabTree(new_df)
+                is_valid = result.validate(verbose=True)
+                assert is_valid
+                return result
+        else:
+            return False
+
+    def as_attached_orphans(self, as_delab_tree=True):
+        """
+        In social media, many trees have missing posts. This can lead to a big loss of data.
+        This algorithm attaches missing tweets to the root_post thus recreating a similar tree_structure
+        :param as_delab_tree: if true returns a copy of the delab tree object, as nx graph else
+        :return:
+        """
+        roots = self.df[pd_is_nan(self.df["parent_id"])]
+        missing_parents = get_missing_parents(self.df)
+
+        if len(roots.index) == 0:
+            roots = self.df[self.df["parent_id"].isin(missing_parents)]
+        # assert len(roots.index) != 0, "There should be at least one root in the tree"
+
+        if len(roots.index) > 1:
+            roots2 = roots[roots["post_id"] == roots["tree_id"]]
+            if len(roots2.index) == 1:
+                roots = roots2
+            else:
+                roots.sort_values("created_at", inplace=True)
+                roots = roots.head(1)
+
+        roots = roots.reset_index(drop=True)
+        try:
+            root_node_id = roots.loc[0, ["post_id"]][0]
+        except KeyError:
+            self.validate(verbose=True)
+            print("hello")
+
+        self.df.sort_values("created_at", inplace=True)
+
+        def change_parents(parent_id):
+            if parent_id in missing_parents:
+                return root_node_id
+            else:
+                return parent_id
+
+        if as_delab_tree:
+            df2 = self.df.copy()
+            df2["parent_id"] = df2["parent_id"].apply(change_parents)
+            tree2 = DelabTree(df2)
+            return tree2.as_reply_graph()
+        else:
+            self.df["parent_id"] = self.df["parent_id"].apply(change_parents)
+            self.reply_graph = self.as_reply_graph()
+            return self.reply_graph
+
+    def as_merged_self_answers_graph(self, as_delab_tree=True, return_deleted=False):
         """
         subsequent posts of the same author are merged into one post
+        :param as_delab_tree: if true, returns the DelabTree as a new object with the merged_self_answers
         :param return_deleted:
         :return:
         """
@@ -215,7 +311,7 @@ class DelabTree:
         post_ids = list(posts_df.loc[row_indexes2][TABLE.COLUMNS.POST_ID])
         for row_index2 in row_indexes2:
             author_id, parent_author_id, parent_id, post_id = self.__get_table_row_as_names(posts_df, row_index2)
-            if not(pd_is_nan(parent_id)):
+            if not (pd_is_nan(parent_id)):
                 # if parent_id not in post_ids and parent_id not in to_delete_list:
                 #     print("conversation {} has no root_node".format(self.conversation_id))
                 if post_id in to_change_map:
@@ -232,12 +328,25 @@ class DelabTree:
         nx.set_node_attributes(G, GRAPH.SUBSETS.TWEETS, name="subset")
         # return G, to_delete_list, changed_nodes
         # print("removed {} and changed {}".format(to_delete_list, to_change_map))
+        if as_delab_tree:
+            self.reply_graph = G
+            self.__update_df()
+            return self
         if return_deleted:
             return G, to_delete_list, to_change_map
         return G
 
     def as_flow_duo(self, min_length_flows=6, min_post_branching=3, min_pre_branching=3, metric="sentiment",
                     verbose=False) -> FLowDuo:
+        """
+        compute the two flows of the tree that have the greatest different regarding the metric
+        :param min_length_flows:
+        :param min_post_branching:
+        :param min_pre_branching:
+        :param metric: the dataframe needs to contain a column sentiment_value or toxicity_value, metric can be toxicity instead of default
+        :param verbose:
+        :return:
+        """
         flows, longest = self.get_conversation_flows()
 
         candidate_flows: list[(str, list[DelabPost])] = []
@@ -411,7 +520,20 @@ class DelabTree:
                 return True
             else:
                 if verbose:
-                    print("The graph is not a valid tree.")
+                    print("The graph with id {} is not a valid tree.".format(self.conversation_id))
+
+                    try:
+                        cycles = nx.find_cycle(self.reply_graph)
+                        print("the graph contains cycles: ", cycles)
+                    except NetworkXNoCycle:
+                        pass
+
+                    if len(list(nx.weakly_connected_components(self.reply_graph))) > 1:
+                        print("the graph has more then one connected component")
+                        print("number of missing parents are: ", len(get_missing_parents(self.df)))
+                        roots = [n for n, d in self.reply_graph.in_degree() if d == 0]
+                        print("number of roots are", len(roots))
+
                     # create a new dictionary of nodes with truncated labels
                     new_labels = {node: convert_float_ids_to_readable_str(node)[-3:] for node in self.reply_graph.nodes}
 

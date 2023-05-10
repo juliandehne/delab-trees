@@ -14,7 +14,7 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
 
     def test_load_trees(self):
         # tests if the dataframes is loaded correctly as multiple trees
-        assert len(self.manager.trees) == 5
+        assert len(self.manager.trees) == 6
         n_graph = self.manager.trees[1].reply_graph
         assert n_graph is not None
         assert len(n_graph.edges()) == 3
@@ -66,6 +66,12 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
 
     def test_validated(self):  #
         assert self.manager.validate(verbose=True)
+
+    def test_attached_orphans(self):
+        tree : DelabTree = self.manager.trees[6]
+        tree = tree.as_attached_orphans(as_delab_tree=False)
+        tree.validate(verbose=False)
+        assert len(tree.as_reply_graph().nodes()) == 4
 
 
 if __name__ == '__main__':

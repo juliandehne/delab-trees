@@ -16,6 +16,7 @@ from delab_trees.preperation_alg_pb import prepare_pb_data
 from delab_trees.preperation_alg_rb import prepare_rb_data
 from delab_trees.training_alg_pb import train_pb
 from delab_trees.training_alg_rb import train_rb
+from delab_trees.util import get_missing_parents
 import multiprocessing
 from multiprocessing import Pool
 from functools import partial
@@ -54,7 +55,7 @@ class TreeManager:
         print("loading data into manager and converting table into trees...")
         grouped_by_tree_ids = {k: v for k, v in self.df.groupby(TREE_IDENTIFIER)}
 
-        if n is not None and n < self.num_cpus:
+        if n is not None:
             # cannot parallelize if the n of wanted trees is less then the cpus to be used
             trees_result = create_trees_from_grouped(n, grouped_by_tree_ids)
             self.trees = trees_result
@@ -90,21 +91,17 @@ class TreeManager:
     def validate(self, verbose=True):
         assert self.df["post_id"].notnull().all(), "post_ids should not be null"
 
-        parents = set(list(self.df["parent_id"]))
-        posts = set(list(self.df["post_id"]))
-        missing_parents = parents - posts.intersection(parents)
+        missing_parent_ids = get_missing_parents(self.df)
 
-        if len(missing_parents) != 1:
-            print("the following parents are not contained in the id column:", list(missing_parents)[:5])
+        if len(missing_parent_ids) != 0:
+            print("the following parents are not contained in the id column:", list(missing_parent_ids)[:5])
 
-        assert len(missing_parents) == 1, "all parent ids except NAN should be contained in the post id column"
+        assert len(missing_parent_ids) == 0, "all parent ids except NAN should be contained in the post id column"
 
         tree: DelabTree
         for tree_id, tree in tqdm(self.trees.items()):
             is_valid = tree.validate(verbose)
-            assert is_valid, "Tree with id {} is not valid".format(tree_id)
-            if not is_valid:
-                break
+            assert is_valid, "Tree with id {} is not valid".format(str(tree_id))
         return True
 
     def get_mean_author_metrics(self):
@@ -144,7 +141,37 @@ class TreeManager:
         for elem in to_remove:
             self.trees.pop(elem)
             # self.df = self.df.drop(self.df[self.df['tree_id'] == elem].index)
-        self.df.drop(self.df['tree_id'].isin(to_remove).index)
+        self.df.drop(self.df['tree_id'].isin(to_remove).index, inplace=True)
+
+    def attach_orphans(self):
+        new_trees = {}
+        new_dfs = []
+        for key, tree in tqdm(self.trees.items()):
+            valid = tree.validate(verbose=False)
+            if not valid:
+                new_tree = tree.as_attached_orphans()
+            else:
+                new_tree = tree
+            new_trees[key] = new_tree
+            new_dfs.append(new_tree.df)
+
+        df2 = pd.concat(new_dfs)
+        return TreeManager(df2)
+
+    def remove_cycles(self):
+        new_trees = {}
+        new_dfs = []
+        for key, tree in tqdm(self.trees.items()):
+            valid = tree.validate(verbose=False)
+            if not valid:
+                new_tree = tree.as_removed_cycles(as_delab_tree=True)
+            else:
+                new_tree = tree
+            new_trees[key] = new_tree
+            new_dfs.append(new_tree.df)
+
+        df2 = pd.concat(new_dfs)
+        return TreeManager(df2)
 
     def __prepare_rb_model(self, prepared_data_filepath):
         """
@@ -246,12 +273,19 @@ def get_test_manager() -> TreeManager:
     d5['parent_id'] = [None, 1, 2, 3]
     d5["author_id"] = ["james", "james", "james", "john"]
 
+    d6 = d.copy()
+    d6["tree_id"] = [6] * 4
+    d6['parent_id'] = [None, 1, 42, 3]
+    d6["author_id"] = ["james", "hannah", "jana", "john"]
+
     df1 = pd.DataFrame(data=d)
     df2 = pd.DataFrame(data=d2)
     df3 = pd.DataFrame(data=d3)
     df4 = pd.DataFrame(data=d4)
     df5 = pd.DataFrame(data=d5)
-    df_list = [df1, df2, df3, df4, df5]
+    df6 = pd.DataFrame(data=d6)
+
+    df_list = [df1, df2, df3, df4, df5, df6]
     df = pd.concat(df_list, ignore_index=True)
     manager = TreeManager(df)
     return manager
