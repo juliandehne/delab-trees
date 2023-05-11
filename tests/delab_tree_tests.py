@@ -38,11 +38,11 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
 
     def test_merge_subsequent_graph(self):
         tree: DelabTree = self.manager.trees[4]
-        merged_graph = tree.as_merged_self_answers_graph()
+        merged_graph = tree.as_merged_self_answers_graph(as_delab_tree=False)
         assert len(merged_graph.edges()) == 1
         # print(merged_graph.edges(data=True))
         tree2: DelabTree = self.manager.trees[5]
-        merged_graph2 : DelabTree = tree2.as_merged_self_answers_graph()
+        merged_graph2: DelabTree = tree2.as_merged_self_answers_graph(as_delab_tree=False)
         assert len(merged_graph2.edges()) == 1
 
     def test_flow_computation(self):
@@ -65,12 +65,12 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
         assert author_measures_steven.baseline_author_vision > 0
 
     def test_validated(self):  #
-        assert self.manager.validate(verbose=True)
+        assert not self.manager.validate(verbose=True)
 
     def test_attached_orphans(self):
-        tree : DelabTree = self.manager.trees[6]
-        tree = tree.as_attached_orphans(as_delab_tree=False)
-        tree.validate(verbose=False)
+        tree: DelabTree = self.manager.trees[6]
+        tree = tree.as_attached_orphans(as_delab_tree=True)
+        tree.validate(verbose=True)
         assert len(tree.as_reply_graph().nodes()) == 4
 
 

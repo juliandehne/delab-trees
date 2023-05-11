@@ -89,19 +89,28 @@ class TreeManager:
         return self.trees[choice(list(self.trees.keys()))]
 
     def validate(self, verbose=True):
-        assert self.df["post_id"].notnull().all(), "post_ids should not be null"
+        if not self.df["post_id"].notnull().all():
+            if verbose:
+                print("post_ids should not be null")
+                return False
 
         missing_parent_ids = get_missing_parents(self.df)
 
         if len(missing_parent_ids) != 0:
             print("the following parents are not contained in the id column:", list(missing_parent_ids)[:5])
 
-        assert len(missing_parent_ids) == 0, "all parent ids except NAN should be contained in the post id column"
+        if len(missing_parent_ids) == 0:
+            if verbose:
+                print("all parent ids except NAN should be contained in the post id column")
+            return False
 
         tree: DelabTree
         for tree_id, tree in tqdm(self.trees.items()):
             is_valid = tree.validate(verbose)
-            assert is_valid, "Tree with id {} is not valid".format(str(tree_id))
+            if not is_valid:
+                if verbose:
+                    print("Tree with id {} is not valid".format(str(tree_id)))
+                    return False
         return True
 
     def get_mean_author_metrics(self):

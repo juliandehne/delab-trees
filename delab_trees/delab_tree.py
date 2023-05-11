@@ -67,8 +67,11 @@ class DelabTree:
     def as_reply_graph(self):
         df2: DataFrame = deepcopy(self.df)
         node2creation = df2.set_index(TABLE.COLUMNS.POST_ID).to_dict()[TABLE.COLUMNS.CREATED_AT]
-        df2 = df2[df2[TABLE.COLUMNS.PARENT_ID] != 'nan']
-        df2 = df2[df2[TABLE.COLUMNS.PARENT_ID].notna()]
+        # df2 = df2[df2[TABLE.COLUMNS.PARENT_ID] != 'nan']
+        # df2 = df2[df2[TABLE.COLUMNS.PARENT_ID].notna()]
+        root_mask = df2[TABLE.COLUMNS.PARENT_ID].apply(pd_is_nan)
+        df2 = df2[~root_mask]
+
         df2 = df2.assign(label=GRAPH.LABELS.PARENT_OF)
         networkx_graph = nx.from_pandas_edgelist(df2,
                                                  source=TABLE.COLUMNS.PARENT_ID,
@@ -177,43 +180,46 @@ class DelabTree:
             return self
         return largest_tree
 
-    def as_removed_cycles(self, as_delab_tree=True):
+    def as_removed_cycles(self, as_delab_tree=True, compute_arborescence=False):
         """
         remove cycles in graph and return minimum spanning arborescence
+        :param compute_arborescence:
         :param as_delab_tree: if True will return a new DelabTree object instead of the edited graph
         :return:
         """
-        if nx.is_weakly_connected(self.reply_graph):
-            G = self.reply_graph
-            # find all the simple cycles in the graph
-            cycles = list(nx.simple_cycles(G))
+        # assert nx.is_weakly_connected(self.reply_graph), "the graph needs to be weakly connected to remove cycles"
 
-            # remove the edges that belong to the cycles
-            for cycle in cycles:
-                for i in range(len(cycle)):
-                    G.remove_edge(cycle[i], cycle[(i + 1) % len(cycle)])
+        G = self.reply_graph
+        # find all the simple cycles in the graph
+        cycles = list(nx.simple_cycles(G))
 
-            # find the minimum spanning arborescence of the graph
-            T = nx.minimum_spanning_arborescence(G)
+        # remove the edges that belong to the cycles
+        for cycle in cycles:
+            for i in range(len(cycle)):
+                G.remove_edge(cycle[i], cycle[(i + 1) % len(cycle)])
 
-            if not as_delab_tree:
-                return T
-            else:
-                new_df = self.df[self.df[["parent_id", "post_id"]]
-                    .apply(tuple, axis=1).isin(T.edges())]
+        # find the minimum spanning arborescence of the graph
+        if compute_arborescence:
+            G = nx.minimum_spanning_arborescence(G)
 
-                roots = [n for n, d in T.in_degree() if d == 0]
-                root_node_id = roots[0]
-                root_row = self.df[self.df["post_id"] == root_node_id]
-                root_row = root_row.head(1)
-                root_row["parent_id"] = 'nan'
-
-                result = DelabTree(new_df)
-                is_valid = result.validate(verbose=True)
-                assert is_valid
-                return result
+        if not as_delab_tree:
+            return G
         else:
-            return False
+            new_df = self.df[self.df[["parent_id", "post_id"]]
+                .apply(tuple, axis=1).isin(G.edges())]
+
+            roots = [n for n, d in G.in_degree() if d == 0]
+            root_node_id = roots[0]
+            root_row = self.df[self.df["post_id"] == root_node_id]
+            root_row = root_row.head(1)
+            root_row["parent_id"] = 'nan'
+
+            new_df = pd.concat([new_df, root_row])
+
+            result = DelabTree(new_df)
+            is_valid = result.validate(verbose=True)
+            assert is_valid
+            return result
 
     def as_attached_orphans(self, as_delab_tree=True):
         """
@@ -256,7 +262,7 @@ class DelabTree:
             df2 = self.df.copy()
             df2["parent_id"] = df2["parent_id"].apply(change_parents)
             tree2 = DelabTree(df2)
-            return tree2.as_reply_graph()
+            return tree2
         else:
             self.df["parent_id"] = self.df["parent_id"].apply(change_parents)
             self.reply_graph = self.as_reply_graph()
@@ -438,7 +444,7 @@ class DelabTree:
 
     def get_baseline_author_vision(self):
         author2baseline = {}
-        author_interaction_graph, to_delete_list, to_change_map = self.as_merged_self_answers_graph(return_deleted=True)
+        author_interaction_graph, to_delete_list, to_change_map = self.as_merged_self_answers_graph(return_deleted=True, as_delab_tree=False)
         root = get_root(author_interaction_graph)
         post2author, author2posts = self.__get_author_post_map()
         for node in to_delete_list:
@@ -513,6 +519,11 @@ class DelabTree:
         paint_bipartite_author_graph(tree, root)
 
     def validate(self, verbose=True):
+        nodes = self.reply_graph.nodes
+        if 'NA' in nodes or 'nan' in nodes:
+            if verbose:
+                print("the na values should not be part of the tree nodes!")
+            return False
         try:
             if nx.is_tree(self.reply_graph):
                 if verbose:
