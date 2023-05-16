@@ -2,6 +2,9 @@ import inspect
 import logging
 import os
 import pickle
+from copy import deepcopy
+from functools import partial
+from multiprocessing import Pool
 from random import choice
 from statistics import mean
 
@@ -12,29 +15,30 @@ from tqdm import tqdm
 from delab_trees.constants import TREE_IDENTIFIER
 from delab_trees.delab_author_metric import AuthorMetric
 from delab_trees.delab_tree import DelabTree
+from delab_trees.parallel_utils import compute_optimal_cpu_count
 from delab_trees.preperation_alg_pb import prepare_pb_data
 from delab_trees.preperation_alg_rb import prepare_rb_data
 from delab_trees.training_alg_pb import train_pb
 from delab_trees.training_alg_rb import train_rb
 from delab_trees.util import get_missing_parents
-import multiprocessing
-from multiprocessing import Pool
-from functools import partial
 
 logger = logging.getLogger(__name__)
 
 
 class TreeManager:
 
-    def __init__(self, df, n=None):
-        self.num_cpus = max(multiprocessing.cpu_count() - 2, 1)
+    def __init__(self, df, trees=None, n=None, max_posts=None):
+        self.num_cpus = compute_optimal_cpu_count()
         self.trees = {}
-        self.df = df
-        self.__pre_process_df()
-        self.__initialize_trees(n)
+        self.df = deepcopy(df)
+        if trees is None:
+            self.__pre_process_df()
+            self.__initialize_trees(n, max_posts)
+        else:
+            self.trees = trees
 
-    def internal_hello_world(self):
-        print("hello world internal 5" + str(self.df.shape))
+    def __len__(self):
+        return len(self.trees)
 
     def __pre_process_df(self):
         """
@@ -51,14 +55,18 @@ class TreeManager:
             assert self.df["parent_id"].dtype == "object" and self.df[
                 "post_id"].dtype == "object", "post_id and parent_id need to be both float or str"
 
-    def __initialize_trees(self, n=None):
+    def __initialize_trees(self, n=None, max_posts=None):
         print("loading data into manager and converting table into trees...")
-        grouped_by_tree_ids = {k: v for k, v in self.df.groupby(TREE_IDENTIFIER)}
+        if max_posts is None:
+            grouped_by_tree_ids = {k: v for k, v in self.df.groupby(TREE_IDENTIFIER)}
+        else:
+            grouped_by_tree_ids = {k: v for k, v in self.df.groupby(TREE_IDENTIFIER) if len(v.index) < 100}
 
         if n is not None:
             # cannot parallelize if the n of wanted trees is less then the cpus to be used
             trees_result = create_trees_from_grouped(n, grouped_by_tree_ids)
             self.trees = trees_result
+            self.df = self.df[self.df["tree_id"].isin(self.trees.keys())]
         else:
 
             # compute the trees in parallel, n will be ignored until later
@@ -79,6 +87,30 @@ class TreeManager:
 
         return self
 
+    def __map_trees_parallel(self, tree_map_f, max_workers=1000):
+        new_trees = []
+        new_dfs = []
+
+        tree_items = self.trees.items()
+        compute_tre_map_p = partial(compute_tre_map_f, tree_map_f)
+
+        n_workers = min(self.num_cpus, max_workers)
+
+        with Pool(n_workers) as p:
+            # use the imap_unordered function to parallelize the loop
+            for new_df, new_tree in tqdm(p.imap_unordered(compute_tre_map_p, tree_items),
+                                         total=len(tree_items)):
+                new_trees.append(new_tree)
+                new_dfs.append(new_df)
+
+        df2 = pd.concat(new_dfs)
+        new_trees_dict = {}
+        for d in new_trees:
+            new_trees_dict.update(d)
+
+        assert len(new_dfs) == len(new_trees)
+        return TreeManager(df2, trees=new_trees_dict)
+
     def single(self) -> DelabTree:
         assert len(self.trees.keys()) == 1, "There needs to be exactly one tree in the manager!"
         first_key = list(self.trees.keys())[0]
@@ -88,29 +120,29 @@ class TreeManager:
         assert len(self.trees.keys()) >= 1
         return self.trees[choice(list(self.trees.keys()))]
 
-    def validate(self, verbose=True):
-        if not self.df["post_id"].notnull().all():
-            if verbose:
-                print("post_ids should not be null")
+    def validate(self, verbose=True, check_for="all", break_on_invalid=False):
+        """
+        if check_for == "all":
+            if not self.df["post_id"].notnull().all():
+                if verbose:
+                    print("post_ids should not be null")
                 return False
 
-        missing_parent_ids = get_missing_parents(self.df)
+            missing_parent_ids = get_missing_parents(self.df)
 
-        if len(missing_parent_ids) != 0:
-            print("the following parents are not contained in the id column:", list(missing_parent_ids)[:5])
-
-        if len(missing_parent_ids) == 0:
-            if verbose:
-                print("all parent ids except NAN should be contained in the post id column")
-            return False
-
+            if len(missing_parent_ids) != 0:
+                if verbose:
+                    print("the following parents are not contained in the id column:", list(missing_parent_ids)[:5])
+                return False
+        """
         tree: DelabTree
         for tree_id, tree in tqdm(self.trees.items()):
-            is_valid = tree.validate(verbose)
+            tree.validate_internal_structure()
+            is_valid = tree.validate(verbose, check_for=check_for)
             if not is_valid:
-                if verbose:
-                    print("Tree with id {} is not valid".format(str(tree_id)))
-                    return False
+                if break_on_invalid:
+                    assert is_valid
+                return False
         return True
 
     def get_mean_author_metrics(self):
@@ -153,34 +185,18 @@ class TreeManager:
         self.df.drop(self.df['tree_id'].isin(to_remove).index, inplace=True)
 
     def attach_orphans(self):
-        new_trees = {}
-        new_dfs = []
-        for key, tree in tqdm(self.trees.items()):
-            valid = tree.validate(verbose=False)
-            if not valid:
-                new_tree = tree.as_attached_orphans()
-            else:
-                new_tree = tree
-            new_trees[key] = new_tree
-            new_dfs.append(new_tree.df)
-
-        df2 = pd.concat(new_dfs)
-        return TreeManager(df2)
+        """
+        computes the attach orphans function: DelabTree -> DelabTree in parallel for all trees
+        :return:
+        """
+        return self.__map_trees_parallel("as_attached_orphans")
 
     def remove_cycles(self):
-        new_trees = {}
-        new_dfs = []
-        for key, tree in tqdm(self.trees.items()):
-            valid = tree.validate(verbose=False)
-            if not valid:
-                new_tree = tree.as_removed_cycles(as_delab_tree=True)
-            else:
-                new_tree = tree
-            new_trees[key] = new_tree
-            new_dfs.append(new_tree.df)
-
-        df2 = pd.concat(new_dfs)
-        return TreeManager(df2)
+        """
+        computes the remove cycles function: DelabTree -> DelabTree in parallel for all trees
+        :return:
+        """
+        return self.__map_trees_parallel("as_removed_cycles", max_workers=1)
 
     def __prepare_rb_model(self, prepared_data_filepath):
         """
@@ -237,6 +253,8 @@ class TreeManager:
             return applied_pb_model[tree.conversation_id]
 
 
+# functions for testing below
+
 def get_test_tree() -> DelabTree:
     from delab_trees import TreeManager
 
@@ -282,10 +300,18 @@ def get_test_manager() -> TreeManager:
     d5['parent_id'] = [None, 1, 2, 3]
     d5["author_id"] = ["james", "james", "james", "john"]
 
+    # not connected
     d6 = d.copy()
     d6["tree_id"] = [6] * 4
     d6['parent_id'] = [None, 1, 42, 3]
     d6["author_id"] = ["james", "hannah", "jana", "john"]
+
+    # contains cycle
+    d7 = d.copy()
+    d7["tree_id"] = [7] * 4
+    d7['post_id'] = [1, 2, 3, 2]
+    d7['parent_id'] = [None, 1, 2, 2]
+    d7["author_id"] = ["james", "hannah", "jana", "john"]
 
     df1 = pd.DataFrame(data=d)
     df2 = pd.DataFrame(data=d2)
@@ -293,8 +319,9 @@ def get_test_manager() -> TreeManager:
     df4 = pd.DataFrame(data=d4)
     df5 = pd.DataFrame(data=d5)
     df6 = pd.DataFrame(data=d6)
+    df7 = pd.DataFrame(data=d7)
 
-    df_list = [df1, df2, df3, df4, df5, df6]
+    df_list = [df1, df2, df3, df4, df5, df6, df7]
     df = pd.concat(df_list, ignore_index=True)
     manager = TreeManager(df)
     return manager
@@ -314,9 +341,7 @@ def get_social_media_trees(platform="twitter", n=None, context="production") -> 
     return manager
 
 
-def hello_world():
-    print("hello world 9")
-
+# functions for parallel below
 
 def create_trees_from_grouped(n_trees, groupings):
     trees = {}
@@ -332,3 +357,11 @@ def create_trees_from_grouped(n_trees, groupings):
 
 def create_trees_from_grouped_helper(groupings):
     return create_trees_from_grouped(None, groupings)
+
+
+def compute_tre_map_f(tree_map_f, tree_items_group):
+    key = tree_items_group[0]
+    tree = tree_items_group[1]
+    new_tree_local: DelabTree = getattr(tree, tree_map_f)(tree)
+
+    return new_tree_local.df, {key: new_tree_local}

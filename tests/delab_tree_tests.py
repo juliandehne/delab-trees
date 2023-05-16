@@ -5,6 +5,7 @@ import networkx as nx
 
 from delab_trees.delab_tree import DelabTree
 from delab_trees.main import get_test_manager
+import resource
 
 
 class DelabTreeConstructionTestCase(unittest.TestCase):
@@ -14,7 +15,7 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
 
     def test_load_trees(self):
         # tests if the dataframes is loaded correctly as multiple trees
-        assert len(self.manager.trees) == 6
+        assert len(self.manager.trees) == 7
         n_graph = self.manager.trees[1].reply_graph
         assert n_graph is not None
         assert len(n_graph.edges()) == 3
@@ -72,6 +73,13 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
         tree = tree.as_attached_orphans(as_delab_tree=True)
         tree.validate(verbose=True)
         assert len(tree.as_reply_graph().nodes()) == 4
+
+    def test_remove_cycles(self):
+        assert not self.manager.validate(verbose=False)
+        tree_manager = self.manager.remove_cycles()
+        tree: DelabTree = tree_manager.trees[7]
+        tree.validate(verbose=True)
+        assert len(tree.as_reply_graph().nodes()) == 3
 
 
 if __name__ == '__main__':

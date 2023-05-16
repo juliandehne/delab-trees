@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import pandas as pd
-from networkx import MultiDiGraph, NetworkXPointlessConcept, NetworkXNoCycle
+from networkx import MultiDiGraph, NetworkXPointlessConcept, NetworkXNoCycle, DiGraph
 from networkx.drawing.nx_pydot import graphviz_layout
 from pandas import DataFrame
 
@@ -16,12 +16,12 @@ from delab_trees.delab_post import DelabPosts, DelabPost
 from delab_trees.exceptions import GraphNotInitializedException
 from delab_trees.flow_duos import compute_highest_flow_delta, FLowDuo
 from delab_trees.util import get_root, convert_float_ids_to_readable_str, paint_bipartite_author_graph, pd_is_nan, \
-    get_missing_parents
+    get_missing_parents, get_all_roots
 
 
 class DelabTree:
 
-    def __init__(self, df: pd.DataFrame):
+    def __init__(self, df: pd.DataFrame, g: MultiDiGraph = None):
         """
         Assumes the following columns as a pandas df:
         (see constants.py)
@@ -36,7 +36,10 @@ class DelabTree:
         :param df:
         """
         self.df: DataFrame = deepcopy(df)
-        self.reply_graph: MultiDiGraph = self.as_reply_graph()
+        if g is None:
+            self.reply_graph: DiGraph = self.as_reply_graph()
+        else:
+            self.reply_graph = g
         self.author_graph: MultiDiGraph = None
         self.conversation_id = self.df.iloc[0][TABLE.COLUMNS.TREE_ID]
 
@@ -77,7 +80,7 @@ class DelabTree:
                                                  source=TABLE.COLUMNS.PARENT_ID,
                                                  target=TABLE.COLUMNS.POST_ID,
                                                  edge_attr='label',
-                                                 create_using=nx.MultiDiGraph())
+                                                 create_using=nx.DiGraph())
         nx.set_node_attributes(networkx_graph, GRAPH.SUBSETS.TWEETS, name="subset")  # rename to posts
         nx.set_node_attributes(networkx_graph, node2creation, name=TABLE.COLUMNS.CREATED_AT)
         # draw the graph
@@ -193,13 +196,14 @@ class DelabTree:
         # find all the simple cycles in the graph
         cycles = list(nx.simple_cycles(G))
 
-        # remove the edges that belong to the cycles
-        for cycle in cycles:
-            for i in range(len(cycle)):
-                G.remove_edge(cycle[i], cycle[(i + 1) % len(cycle)])
+        if not compute_arborescence:
+            # remove the edges that belong to the cycles
+            for cycle in cycles:
+                for i in range(len(cycle)):
+                    G.remove_edge(cycle[i], cycle[(i + 1) % len(cycle)])
 
         # find the minimum spanning arborescence of the graph
-        if compute_arborescence:
+        else:
             G = nx.minimum_spanning_arborescence(G)
 
         if not as_delab_tree:
@@ -216,9 +220,9 @@ class DelabTree:
 
             new_df = pd.concat([new_df, root_row])
 
-            result = DelabTree(new_df)
-            is_valid = result.validate(verbose=True)
-            assert is_valid
+            result = DelabTree(new_df, G)
+            # is_valid = result.validate(verbose=True)
+            # assert is_valid
             return result
 
     def as_attached_orphans(self, as_delab_tree=True):
@@ -228,21 +232,31 @@ class DelabTree:
         :param as_delab_tree: if true returns a copy of the delab tree object, as nx graph else
         :return:
         """
+        """
+        if self.validate(verbose=False):
+            if as_delab_tree:
+                return self
+            else:
+                return self.reply_graph
+        """
+
         roots = self.df[pd_is_nan(self.df["parent_id"])]
         missing_parents = get_missing_parents(self.df)
 
+        # no clear roots but missing parents
         if len(roots.index) == 0:
             roots = self.df[self.df["parent_id"].isin(missing_parents)]
-        # assert len(roots.index) != 0, "There should be at least one root in the tree"
 
         if len(roots.index) > 1:
+            # if there are more then one option for the root
             roots2 = roots[roots["post_id"] == roots["tree_id"]]
             if len(roots2.index) == 1:
                 roots = roots2
             else:
-                roots.sort_values("created_at", inplace=True)
-                roots = roots.head(1)
+                sorted_roots = roots.sort_values("created_at")
+                roots = sorted_roots.head(1)
 
+        # get the root node element from the root row
         roots = roots.reset_index(drop=True)
         try:
             root_node_id = roots.loc[0, ["post_id"]][0]
@@ -250,10 +264,10 @@ class DelabTree:
             self.validate(verbose=True)
             print("hello")
 
-        self.df.sort_values("created_at", inplace=True)
+        # self.df.sort_values("created_at", inplace=True)
 
         def change_parents(parent_id):
-            if parent_id in missing_parents:
+            if parent_id in missing_parents or pd_is_nan(parent_id):
                 return root_node_id
             else:
                 return parent_id
@@ -261,11 +275,17 @@ class DelabTree:
         if as_delab_tree:
             df2 = self.df.copy()
             df2["parent_id"] = df2["parent_id"].apply(change_parents)
+            df2.loc[df2["parent_id"] == df2["post_id"], "parent_id"] = 'nan'
             tree2 = DelabTree(df2)
+            # tree2.reply_graph = tree2.as_tree() # no idea why
+            # valid = tree2.validate(verbose=True)
+            # assert valid
             return tree2
         else:
             self.df["parent_id"] = self.df["parent_id"].apply(change_parents)
+            self.df.loc[self.df["parent_id"] == self.df["post_id"], "parent_id"] = 'nan'
             self.reply_graph = self.as_reply_graph()
+            # self.reply_graph = self.as_tree()  # no idea why
             return self.reply_graph
 
     def as_merged_self_answers_graph(self, as_delab_tree=True, return_deleted=False):
@@ -444,7 +464,8 @@ class DelabTree:
 
     def get_baseline_author_vision(self):
         author2baseline = {}
-        author_interaction_graph, to_delete_list, to_change_map = self.as_merged_self_answers_graph(return_deleted=True, as_delab_tree=False)
+        author_interaction_graph, to_delete_list, to_change_map = self.as_merged_self_answers_graph(return_deleted=True,
+                                                                                                    as_delab_tree=False)
         root = get_root(author_interaction_graph)
         post2author, author2posts = self.__get_author_post_map()
         for node in to_delete_list:
@@ -505,8 +526,124 @@ class DelabTree:
             parent_author_id = parent_author_frame.iloc[0][TABLE.COLUMNS.AUTHOR_ID]
         return author_id, parent_author_id, parent_id, post_id
 
+    def validate_internal_structure(self):
+        assert not self.df[
+            'post_id'].duplicated().any(), "The 'post_id' column is not unique for tree with id {}.".format(
+            self.conversation_id)
+        df_and_graph_align = all(x in list(self.df["post_id"]) or x in list(self.df["parent_id"])
+                                 for x in self.reply_graph.nodes())
+        assert df_and_graph_align, "graph and dataframe out of sync"
+
+    def __validate_cycles(self, verbose):
+        try:
+            cycles = nx.find_cycle(self.reply_graph)
+            if len(cycles) > 0:
+                if verbose:
+                    print("the graph contains cycles: ", cycles)
+                return False
+        except NetworkXNoCycle:
+            return True
+
+    def __validate_orphans(self, verbose):
+        if len(list(nx.weakly_connected_components(self.reply_graph))) > 1:
+            roots = [n for n, d in self.reply_graph.in_degree() if d == 0]
+            if verbose:
+                print("number of roots are", len(roots))
+            return False
+        else:
+            return True
+
+    def __validate_node_names(self, verbose):
+        nodes = self.reply_graph.nodes
+        # check for all kinds of problems
+        if 'NA' in nodes or 'nan' in nodes:
+            if verbose:
+                print("the na values should not be part of the tree nodes!")
+            return False
+        return True
+
+    def __validate_multiple_edges(self, verbose):
+        G = self.reply_graph
+        # Check for multiple edges
+        has_multiple_edges = False
+
+        # Iterate over the edges
+        for u, v in G.edges():
+            if G.number_of_edges(u, v) > 1:
+                has_multiple_edges = True
+                break
+
+        # Print the result
+        if has_multiple_edges and verbose:
+            print("The graph has multiple edges between nodes.")
+        return not has_multiple_edges
+
+    def __is_connected(self, verbose):
+
+        result = nx.is_connected(self.reply_graph.to_undirected())
+        if not result and verbose:
+            print("it is not connected")
+        return result
+
+    def validate(self, verbose=True, check_for="all"):
+
+        result = True
+        # check for cycles only
+        if check_for == 'cycles':
+            result = self.__validate_cycles(verbose)
+        else:
+            if check_for == 'orphans':
+                result = self.__validate_orphans(verbose)
+            else:
+                try:
+                    roots = get_all_roots(self.reply_graph)
+                    result = result and len(roots) == 1
+                    if verbose and len(roots) != 1:
+                        print("roots: ", roots)
+                    result = result and self.__validate_node_names(verbose)
+                    result = result and self.__validate_cycles(verbose)
+                    result = result and self.__validate_orphans(verbose)
+                    result = result and self.__is_connected(verbose)
+                    result = result and self.__validate_multiple_edges(verbose)
+                    result = result and nx.is_tree(self.reply_graph)
+                    if verbose and not nx.is_tree(self.reply_graph):
+                        print("is not a valid tree")
+                except NetworkXPointlessConcept:
+                    print("The graph is not a valid tree.")
+                    result = False
+            if verbose and not result:
+                print("The graph with id {} is not a valid tree.".format(self.conversation_id))
+                try:
+                    self.paint_reply_graph()
+                except Exception:
+                    self.paint_faulty_graph()
+        return result
+
+    def paint_faulty_graph(self):
+        # create a new dictionary of nodes with truncated labels
+        new_labels = {node: convert_float_ids_to_readable_str(node)[-3:] for node in
+                      self.reply_graph.nodes}
+        # create a new figure with a larger canvas
+        fig, ax = plt.subplots(figsize=(8, 6))
+        # create a new graph with truncated labels
+        G_truncated = nx.relabel_nodes(self.reply_graph, new_labels)
+        pos = nx.spring_layout(G_truncated, k=1.5)
+        nx.draw_networkx_nodes(G_truncated, pos=pos, node_size=600, node_color='blue')
+        nx.draw_networkx_edges(G_truncated, pos=pos, width=2)
+        nx.draw_networkx_labels(G_truncated, pos=pos, font_color='white')
+        plt.show()
+
     def paint_reply_graph(self):
         tree = self.as_tree()
+
+        # create a new dictionary of nodes with truncated labels
+        new_labels = {node: convert_float_ids_to_readable_str(node)[-3:] for node in
+                      self.reply_graph.nodes}
+        # create a new figure with a larger canvas
+        fig, ax = plt.subplots(figsize=(20, 8))
+        # create a new graph with truncated labels
+        tree = nx.relabel_nodes(tree, new_labels)
+
         pos = graphviz_layout(tree, prog="twopi")
         # add_attributes_to_plot(conversation_graph, pos, tree)
         nx.draw_networkx_labels(tree, pos)
@@ -517,48 +654,3 @@ class DelabTree:
         tree = self.as_author_graph()
         root = get_root(self.as_reply_graph())
         paint_bipartite_author_graph(tree, root)
-
-    def validate(self, verbose=True):
-        nodes = self.reply_graph.nodes
-        if 'NA' in nodes or 'nan' in nodes:
-            if verbose:
-                print("the na values should not be part of the tree nodes!")
-            return False
-        try:
-            if nx.is_tree(self.reply_graph):
-                if verbose:
-                    print("The graph is a valid tree.")
-                return True
-            else:
-                if verbose:
-                    print("The graph with id {} is not a valid tree.".format(self.conversation_id))
-
-                    try:
-                        cycles = nx.find_cycle(self.reply_graph)
-                        print("the graph contains cycles: ", cycles)
-                    except NetworkXNoCycle:
-                        pass
-
-                    if len(list(nx.weakly_connected_components(self.reply_graph))) > 1:
-                        print("the graph has more then one connected component")
-                        print("number of missing parents are: ", len(get_missing_parents(self.df)))
-                        roots = [n for n, d in self.reply_graph.in_degree() if d == 0]
-                        print("number of roots are", len(roots))
-
-                    # create a new dictionary of nodes with truncated labels
-                    new_labels = {node: convert_float_ids_to_readable_str(node)[-3:] for node in self.reply_graph.nodes}
-
-                    # create a new figure with a larger canvas
-                    fig, ax = plt.subplots(figsize=(8, 6))
-
-                    # create a new graph with truncated labels
-                    G_truncated = nx.relabel_nodes(self.reply_graph, new_labels)
-                    pos = nx.spring_layout(G_truncated, k=1.5)
-                    nx.draw_networkx_nodes(G_truncated, pos=pos, node_size=600, node_color='blue')
-                    nx.draw_networkx_edges(G_truncated, pos=pos, width=2)
-                    nx.draw_networkx_labels(G_truncated, pos=pos, font_color='white')
-                    plt.show()
-                return False
-        except NetworkXPointlessConcept:
-            print("The graph is not a valid tree.")
-            return False
