@@ -531,8 +531,9 @@ class DelabTree:
         return author_id, parent_author_id, parent_id, post_id
 
     def validate_internal_structure(self):
-        assert not self.df[
-            'post_id'].duplicated().any(), "The 'post_id' column is not unique for tree with id {}.".format(
+        is_dublicated = self.df[
+            'post_id'].duplicated().any()
+        assert not is_dublicated, "The 'post_id' column is not unique for tree with id {}.".format(
             self.conversation_id)
         df_and_graph_align = all(x in list(self.df["post_id"]) or x in list(self.df["parent_id"])
                                  for x in self.reply_graph.nodes())

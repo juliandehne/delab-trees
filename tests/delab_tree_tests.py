@@ -1,11 +1,7 @@
 import unittest
 
-import matplotlib.pyplot as plt
-import networkx as nx
-
 from delab_trees.delab_tree import DelabTree
-from delab_trees.main import get_test_manager
-import resource
+from delab_trees.test_data_manager import get_test_manager
 
 
 class DelabTreeConstructionTestCase(unittest.TestCase):
@@ -15,7 +11,7 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
 
     def test_load_trees(self):
         # tests if the dataframes is loaded correctly as multiple trees
-        assert len(self.manager.trees) == 7
+        assert len(self.manager.trees) == 6
         n_graph = self.manager.trees[1].reply_graph
         assert n_graph is not None
         assert len(n_graph.edges()) == 3

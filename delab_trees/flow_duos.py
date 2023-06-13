@@ -75,8 +75,8 @@ def compute_highest_flow_delta(candidate_flows: list[(str, list[DelabPost])], me
     for name, posts in candidate_flows:
         for name_2, posts_2 in candidate_flows:
             if name_2 != name:
-                tweet_ids = set([tweet.twitter_id for tweet in posts])
-                tweet2_ids = set([tweet.twitter_id for tweet in posts_2])
+                tweet_ids = set([tweet.post_id for tweet in posts])
+                tweet2_ids = set([tweet.post_id for tweet in posts_2])
                 n_pre_branching = len(tweet_ids.intersection(tweet2_ids))
                 n_smaller_flow = min(len(tweet_ids), len(tweet2_ids))
                 if n_pre_branching < min_pre_branching or (n_smaller_flow - n_pre_branching) < min_post_branching:
