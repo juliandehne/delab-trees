@@ -10,9 +10,11 @@ from statistics import mean
 
 import numpy as np
 import pandas as pd
+from pandas import DataFrame
 from tqdm import tqdm
 
 from delab_trees.constants import TREE_IDENTIFIER
+from delab_trees.constants import TABLE
 from delab_trees.delab_author_metric import AuthorMetric
 from delab_trees.delab_tree import DelabTree
 from delab_trees.parallel_utils import compute_optimal_cpu_count
@@ -27,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 class TreeManager:
 
-    def __init__(self, df, trees=None, n=None, max_posts=None):
+    def __init__(self, df: DataFrame, trees=None, n=None, max_posts=None):
         self.num_cpus = compute_optimal_cpu_count()
         self.trees = {}
         self.df = deepcopy(df)
@@ -119,6 +121,37 @@ class TreeManager:
     def random(self) -> DelabTree:
         assert len(self.trees.keys()) >= 1
         return self.trees[choice(list(self.trees.keys()))]
+
+    def describe(self):
+        result = "The dataset contains {} conversations and {} posts in total.\n" \
+                 "The average depth of the longest flow per conversation is {}.\n" \
+                 "The conversations contain {} authors and the min and max number of authors per conversation is" \
+                 " min:{}, max: {}, avg: {}.\n" \
+                 "The average length of the posts is {} characters.\n"
+
+        n_conversations = len(set(self.df[TREE_IDENTIFIER]))
+        n_posts = len(self.df.index)
+        n_authors = len(set(self.df[TABLE.COLUMNS.AUTHOR_ID]))
+        avb_len_post = self.df[TABLE.COLUMNS.TEXT].apply(len).round(2).mean()
+        longest_flow_average = self.avg_depth_statistics()  # todo
+        authors_per_conversation = \
+            self.df[[TABLE.COLUMNS.AUTHOR_ID, TABLE.COLUMNS.TREE_ID]].groupby(TABLE.COLUMNS.TREE_ID)[
+                TABLE.COLUMNS.AUTHOR_ID].nunique().tolist()
+        min_authors = min(authors_per_conversation)
+        max_authors = max(authors_per_conversation)
+        avg_authors = np.mean(authors_per_conversation)
+
+        result = result.format(n_conversations, n_posts, longest_flow_average, n_authors, min_authors, max_authors,
+                               avg_authors, avb_len_post)
+
+        return result
+
+    def avg_depth_statistics(self):
+        depths = []
+        tree: DelabTree
+        for tree_id, tree in self.trees.items():
+            depths.append(tree.depth())
+        return np.min(depths), np.max(depths), np.mean(depths)
 
     def validate(self, verbose=True, check_for="all", break_on_invalid=False):
         """

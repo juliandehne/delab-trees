@@ -67,6 +67,10 @@ class DelabTree:
     def total_number_of_posts(self):
         return len(self.df.index)
 
+    def depth(self):
+        longest_path = nx.dag_longest_path(self.reply_graph)
+        return len(longest_path)
+
     def as_reply_graph(self):
         df2: DataFrame = deepcopy(self.df)
         node2creation = df2.set_index(TABLE.COLUMNS.POST_ID).to_dict()[TABLE.COLUMNS.CREATED_AT]
