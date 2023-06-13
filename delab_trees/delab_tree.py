@@ -104,7 +104,7 @@ class DelabTree:
         df = self.df.assign(label=GRAPH.LABELS.AUTHOR_OF)
         # print(df)
         networkx_graph = nx.from_pandas_edgelist(df, source="author_id", target="post_id", edge_attr='label',
-                                                 create_using=nx.MultiDiGraph())
+                                                 create_using=nx.DiGraph())
         author2authorlabel = dict([(author_id, GRAPH.SUBSETS.AUTHORS) for author_id in self.__get_author_ids()])
         nx.set_node_attributes(networkx_graph, author2authorlabel, name="subset")  # rename to posts
         # print(networkx_graph.edges(data=True))
