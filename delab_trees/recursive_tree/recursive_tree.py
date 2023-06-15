@@ -59,7 +59,7 @@ class TreeNode:
     def to_string(self, level=0):
         result = ""
         if level == 0:
-            result += "Conversation: " + str(self.data["conversation_id"]) + "\n\n"
+            result += "Conversation: " + str(self.data["tree_id"]) + "\n\n"
         result += (level * "\t") + self.data_to_string(level)
         for child in self.children:
             result += child.to_string(level + 1)

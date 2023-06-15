@@ -16,6 +16,7 @@ class DelabTreeConstructionTestCase(unittest.TestCase):
         self.example_tree = get_example_conversation_tree()
         tree = DelabTree.from_recursive_tree(self.example_tree)
         assert tree.validate()
+        print(tree.as_recursive_tree().to_string())
 
     def test_convert_to_recursive(self):
         tree: DelabTree = self.manager.trees[1]
