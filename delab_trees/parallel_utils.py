@@ -1,5 +1,4 @@
 import multiprocessing
-import psutil
 
 from delab_trees.delab_tree import DelabTree
 

@@ -6,12 +6,12 @@ import xml.etree.ElementTree as ET
 
 
 class TreeNode:
-    def __init__(self, data, tree_id, parent_id=None, parent_type="replied_to"):
+    def __init__(self, data, node_id, parent_id=None, parent_type="replied_to"):
         """data is a tweet's json object
            tree_id is the logical id of the treenode (either author id when downloading, or twitter id in db)
            parent references the tree_id of the parent
         """
-        self.tree_id = tree_id
+        self.node_id = node_id
         self.data = data
         """
         the following data fields are required
@@ -35,11 +35,11 @@ class TreeNode:
         self.parent_type = parent_type
 
     def find_parent_of(self, node):
-        if type(self.tree_id) is not type(node.parent_id):
-            self.tree_id = int(self.tree_id)
+        if type(self.node_id) is not type(node.parent_id):
+            self.node_id = int(self.node_id)
             node.parent_id = int(node.parent_id)
-        assert type(self.tree_id) is type(node.parent_id)
-        if node.parent_id == self.tree_id:
+        assert type(self.node_id) is type(node.parent_id)
+        if node.parent_id == self.node_id:
             self.children.append(node)
             return True
         else:
@@ -95,7 +95,7 @@ class TreeNode:
     def tweet_to_speech_act_xml(self, parent_elem):
         speech_act_elem = ET.SubElement(parent_elem, 'speech-act')
         speech_act_id_elem = ET.SubElement(speech_act_elem, 'speech-act-id')
-        speech_act_id_elem.text = str(self.tree_id)
+        speech_act_id_elem.text = str(self.node_id)
         author_elem = ET.SubElement(speech_act_elem, 'author')
         author_id_elem = ET.SubElement(author_elem, 'author-id')
         author_id_elem.text = str(self.data["author_id"])
@@ -152,9 +152,9 @@ class TreeNode:
         self.children = favourite_children
 
     def all_tweet_ids(self):
-        result = [self.tree_id]
+        result = [self.node_id]
         for child in self.children:
-            result.append(child.tree_id)
+            result.append(child.node_id)
         return result
 
     def to_post_list(self):

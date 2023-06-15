@@ -18,6 +18,8 @@ from delab_trees.recursive_tree.recursive_tree import TreeNode
 from delab_trees.util import get_root, convert_float_ids_to_readable_str, paint_bipartite_author_graph, pd_is_nan, \
     get_missing_parents, get_all_roots
 
+from delab_trees.recursive_tree.recursive_tree_util import solve_orphans
+
 
 class DelabTree:
 
@@ -160,9 +162,23 @@ class DelabTree:
         return DelabPosts.from_pandas(self.df)
 
     def as_recursive_tree(self):
-        # TODO IMPLEMENT recursive_tree conversion
         # The recursive Tree has the tostring and toxml implemented
-        pass
+        df_sorted = self.df.sort_values('created_at')  # sort for better performance when inserting
+        rows = df_sorted.to_dict(orient='records')
+        root = None
+        orphans = []
+        for row in rows:
+            if pd_is_nan(row[TABLE.COLUMNS.PARENT_ID]):
+                root = row
+            else:
+                non_root_node = TreeNode(data=row, node_id=row["post_id"], parent_id=row["parent_id"])
+                orphans.append(non_root_node)
+        root_node = TreeNode(data=root, node_id=root["post_id"])
+        # now solve all the orphans that have not been seen
+        orphan_added = True
+        while orphan_added:
+            orphan_added, orphans = solve_orphans(orphans, root_node)
+        return root_node
 
     def as_biggest_connected_tree(self, stateless=True):
         """
