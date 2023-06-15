@@ -24,3 +24,4 @@ class TABLE:
         TEXT = "text"
         POST_ID = "post_id"
         TREE_ID = "tree_id"
+        LANGUAGE = "language"

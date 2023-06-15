@@ -4,7 +4,6 @@ from copy import deepcopy
 
 import matplotlib.pyplot as plt
 import networkx as nx
-import numpy as np
 import pandas as pd
 from networkx import MultiDiGraph, NetworkXPointlessConcept, NetworkXNoCycle, DiGraph
 from networkx.drawing.nx_pydot import graphviz_layout
@@ -15,6 +14,7 @@ from delab_trees.delab_author_metric import AuthorMetric
 from delab_trees.delab_post import DelabPosts, DelabPost
 from delab_trees.exceptions import GraphNotInitializedException
 from delab_trees.flow_duos import compute_highest_flow_delta, FLowDuo
+from delab_trees.recursive_tree.recursive_tree import TreeNode
 from delab_trees.util import get_root, convert_float_ids_to_readable_str, paint_bipartite_author_graph, pd_is_nan, \
     get_missing_parents, get_all_roots
 
@@ -42,6 +42,12 @@ class DelabTree:
             self.reply_graph = g
         self.author_graph: MultiDiGraph = None
         self.conversation_id = self.df.iloc[0][TABLE.COLUMNS.TREE_ID]
+
+    @classmethod
+    def from_recursive_tree(cls, root_node: TreeNode):
+        rows = root_node.to_post_list()
+        df = pd.DataFrame(rows)
+        return cls(df=df)
 
     def __update_df(self):
         post_ids = self.reply_graph.nodes

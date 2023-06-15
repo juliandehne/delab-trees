@@ -1,26 +1,45 @@
 import logging
 
-from delab_trees.delab_tree import TABLE
-import xml.etree.ElementTree as ET
-
 logger = logging.getLogger(__name__)
+
+import xml.etree.ElementTree as ET
 
 
 class TreeNode:
-    def __init__(self, data, post_id: int, parent=None, parent_type="replied_to"):
-        self.post_id = post_id
+    def __init__(self, data, tree_id, parent_id=None, parent_type="replied_to"):
+        """data is a tweet's json object
+           tree_id is the logical id of the treenode (either author id when downloading, or twitter id in db)
+           parent references the tree_id of the parent
+        """
+        self.tree_id = tree_id
         self.data = data
+        """
+        the following data fields are required
+          text= root_node.data["text"],
+          simple_request=simple_request,
+          twitter_id=root_node.data["id"],
+          author_id=root_node.data["author_id"],
+          conversation_id=conversation_id,
+          created_at=root_node.data["created_at"],
+          in_reply_to_user_id=root_node.data.get("in_reply_to_user_id", None),
+          in_reply_to_status_id=root_node.data.get("in_reply_to_status_id", None),
+          tn_parent_id=tn_parent,
+          # tn_priority=priority,
+          language=root_node.data["lang"])
+
+        """
+
         self.children = []
         self.max_path_length = 0
-        self.parent = parent
+        self.parent_id = parent_id
         self.parent_type = parent_type
 
     def find_parent_of(self, node):
-        if type(self.post_id) is not type(node.parent.post_id):
-            self.post_id = int(self.post_id)
-            node.parent.post_id = int(node.parent.post_id)
-        assert type(self.post_id) is type(node.parent.post_id)
-        if node.parent.post_id == self.post_id:
+        if type(self.tree_id) is not type(node.parent_id):
+            self.tree_id = int(self.tree_id)
+            node.parent_id = int(node.parent_id)
+        assert type(self.tree_id) is type(node.parent_id)
+        if node.parent_id == self.tree_id:
             self.children.append(node)
             return True
         else:
@@ -40,14 +59,14 @@ class TreeNode:
     def to_string(self, level=0):
         result = ""
         if level == 0:
-            result += "Conversation: " + str(self.data[TABLE.COLUMNS.TREE_ID]) + "\n\n"
+            result += "Conversation: " + str(self.data["conversation_id"]) + "\n\n"
         result += (level * "\t") + self.data_to_string(level)
         for child in self.children:
             result += child.to_string(level + 1)
         return result
 
     def data_to_string(self, level):
-        text = self.data[TABLE.COLUMNS.TEXT].split(".")
+        text = self.data["text"].split(".")
         tabbed_text = []
         for sentence in text:
             sentence = sentence.replace('\n', ' ').replace('\r', '')
@@ -63,7 +82,7 @@ class TreeNode:
         tabbed_text = "\n" + (level * "\t") + separator.join(tabbed_text)
         return str(self.data.get("tw_author__name", "namenotgiven")) + "/" + str(
             self.data.get("tw_author__location", "locationnotgiven")) + "/" + str(
-            self.data[TABLE.COLUMNS.AUTHOR_ID]) + ":" + tabbed_text + "\n\n"
+            self.data["author_id"]) + ":" + tabbed_text + "\n\n"
 
     def to_norm_xml(self, level=0):
         discourse_elem = ET.Element('discourse')
@@ -76,7 +95,7 @@ class TreeNode:
     def tweet_to_speech_act_xml(self, parent_elem):
         speech_act_elem = ET.SubElement(parent_elem, 'speech-act')
         speech_act_id_elem = ET.SubElement(speech_act_elem, 'speech-act-id')
-        speech_act_id_elem.text = str(self.post_id)
+        speech_act_id_elem.text = str(self.tree_id)
         author_elem = ET.SubElement(speech_act_elem, 'author')
         author_id_elem = ET.SubElement(author_elem, 'author-id')
         author_id_elem.text = str(self.data["author_id"])
@@ -88,6 +107,17 @@ class TreeNode:
         in_response_elem.text = str(self.data["tn_parent"])
         for child in self.children:
             child.tweet_to_speech_act_xml(speech_act_elem)
+
+    def list_l1(self):
+        conv_id = []
+        child_id = []
+        text = []
+        # print(self.data['id'])
+        for child in self.children:
+            conv_id.append(self.data['id'])
+            child_id.append(child.data['id'])
+            text.append(child.data['text'])
+        return conv_id, child_id, text
 
     def flat_size(self):
         children_size = 0
@@ -122,7 +152,22 @@ class TreeNode:
         self.children = favourite_children
 
     def all_tweet_ids(self):
-        result = [self.post_id]
+        result = [self.tree_id]
         for child in self.children:
-            result.append(child.post_id)
+            result.append(child.tree_id)
         return result
+
+    def to_post_list(self):
+        self.data["parent_id"] = self.parent_id
+        post_list = [self.data]
+        post_list += to_post_list_helper(self)
+        return post_list
+
+
+def to_post_list_helper(node):
+    post_list = []
+    for child in node.children:
+        child.data["parent_id"] = child.parent_id
+        post_list.append(child.data)
+        post_list = post_list + to_post_list_helper(child)
+    return post_list

@@ -1,9 +1,19 @@
 # functions for testing below
 import os
+import random
+from datetime import datetime
 
 from delab_trees import TreeManager
 from delab_trees.delab_tree import DelabTree
+from delab_trees.constants import TABLE
+
 import pandas as pd
+
+from delab_trees.recursive_tree.recursive_tree import TreeNode
+
+"""
+This contains a couple of test_trees to play around and test stuff
+"""
 
 
 def get_test_tree() -> DelabTree:
@@ -92,3 +102,65 @@ def get_social_media_trees(platform="twitter", n=None, context="production") -> 
     df = pd.read_pickle(file)
     manager = TreeManager(df, n=n)
     return manager
+
+
+def get_example_conversation_tree(lang="en"):
+    twittery_en, twittery_de = __get_example_conversations()
+    conversation_id = 1
+    conv = twittery_en
+    if lang == "de":
+        conversation_id = 2
+        conv = twittery_de
+
+    root_text = conv[0]
+    data = __generate_fake_tweet_data(root_text, 1, conversation_id, lang=lang)
+    tree = TreeNode(data, data['post_id'])
+    current_tree = tree
+    index = 2
+    for fake_tweet in conv[1:]:
+        data = __generate_fake_tweet_data(fake_tweet, index, conversation_id, lang=lang)
+        child = TreeNode(data, data['post_id'], current_tree.tree_id)
+        tree.find_parent_of(child)
+        current_tree = child
+        index += 1
+    return tree
+
+
+def __generate_fake_tweet_data(text, id, conversation_id=1, lang="en"):
+    data = {TABLE.COLUMNS.TEXT: text,
+            TABLE.COLUMNS.POST_ID: id,
+            TABLE.COLUMNS.AUTHOR_ID: 42,
+            TABLE.COLUMNS.CREATED_AT: datetime.now(),
+            TABLE.COLUMNS.TREE_ID: conversation_id,
+            TABLE.COLUMNS.LANGUAGE: lang
+            }
+    return data
+
+
+def __get_example_conversations():
+    tweet1 = '>>Warum darf man das wort Zigeuner-Soße eigentlich nicht mehr sagen?'
+    ans1 = '>>@merle123 weil das z-wort diskriminierent gegenüber Sinti und Roma ist'
+    ans1_1 = '>>@karin508 früher haben wir einfach gesagt was uns gefällt, da haben sich die scheiß Zigeuner doch auch nicht beschwert!'
+    ans1_2 = '>>@reinhartt ernsthaft...?'
+    ans1_3 = '>>@reinhartt bruder halts maul'
+    ans2 = '>>@merle123 man darf sagen was man will. In diesem Land gilt die Meinungfreiheit! diese linken Spasten wollen und den Mund verbieten!'
+    ans2_1 = '>>@diana59 isso!'
+    ans2_2 = '>>@diana59 heul doch.'
+    ans3 = '>>@merle123 frag ich mich auch! Als ob das irgendeinen Zigeuner juckt, die können doch eh kein deutsch'
+    ans4 = '>>@merle123 die scheiß zecken wollen doch nur dass wir spuren! lass dir nichts verbieten!'
+
+    twitterconv_de = [tweet1, ans1, ans1_1, ans1_2, ans1_3, ans2, ans2_1, ans2_2, ans3, ans4]
+
+    tweet1_en = '>>Happy International Day against Homophobia,Transphobia and Biphobia!'
+    ans1_en = '>>@lauren505 wow! the fags are getting really creative with their days!'
+    ans1_2_en = '>>@micheal77 for real!'
+    ans1_3_en = '>>@micheal77 if you dont want to celebrate it, thats fine'
+    ans2_en = '>>@lauren505 why are dykes always telling everyone they are dykes? i really dont care!'
+    ans2_1_en = '>>@karennn when did they say they were a lesbian?:D'
+    ans2_2_en = '>>@karennn i swear the lesbos are getting crazy'
+    ans3_en = '>>lauren505 yayy we love<3'
+    ans4_en = '>>lauren505 so everyday is homo day now?'
+
+    twitterconv_en = [tweet1_en, ans1_en, ans1_2_en, ans1_3_en, ans2_en, ans2_1_en, ans2_2_en, ans3_en, ans4_en]
+
+    return twitterconv_en, twitterconv_de
