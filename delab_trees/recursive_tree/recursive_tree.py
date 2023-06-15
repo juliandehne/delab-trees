@@ -159,6 +159,7 @@ class TreeNode:
 
     def to_post_list(self):
         self.data["parent_id"] = self.parent_id
+        self.data["post_id"] = self.node_id
         post_list = [self.data]
         post_list += to_post_list_helper(self)
         return post_list
@@ -167,6 +168,7 @@ class TreeNode:
 def to_post_list_helper(node):
     post_list = []
     for child in node.children:
+        child.data["post_id"] = child.node_id
         child.data["parent_id"] = child.parent_id
         post_list.append(child.data)
         post_list = post_list + to_post_list_helper(child)

@@ -159,7 +159,7 @@ def __get_example_conversations():
     ans2_1_en = '>>@karennn when did they say they were a lesbian?:D'
     ans2_2_en = '>>@karennn i swear the lesbos are getting crazy'
     ans3_en = '>>lauren505 yayy we love<3'
-    ans4_en = '>>lauren505 so everyday is homo day now?'
+    ans4_en = '>>lauren505 so everyday is homo day now, you think?'
 
     twitterconv_en = [tweet1_en, ans1_en, ans1_2_en, ans1_3_en, ans2_en, ans2_1_en, ans2_2_en, ans3_en, ans4_en]
 
