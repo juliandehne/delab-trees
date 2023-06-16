@@ -114,12 +114,12 @@ def get_example_conversation_tree(lang="en"):
 
     root_text = conv[0]
     data = __generate_fake_tweet_data(root_text, 1, conversation_id, lang=lang)
-    tree = TreeNode(data, data['post_id'])
+    tree = TreeNode(data, data['post_id'], tree_id_name="tree_id")
     current_tree = tree
     index = 2
     for fake_tweet in conv[1:]:
         data = __generate_fake_tweet_data(fake_tweet, index, conversation_id, lang=lang)
-        child = TreeNode(data, data['post_id'], current_tree.node_id)
+        child = TreeNode(data, data['post_id'], current_tree.node_id, tree_id_name="tree_id")
         tree.find_parent_of(child)
         current_tree = child
         index += 1

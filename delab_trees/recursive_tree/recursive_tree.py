@@ -6,13 +6,17 @@ import xml.etree.ElementTree as ET
 
 
 class TreeNode:
-    def __init__(self, data, node_id, parent_id=None, parent_type="replied_to"):
+    def __init__(self, data, node_id, parent_id=None, parent_type="replied_to", tree_id_name="conversation_id"):
         """data is a tweet's json object
            tree_id is the logical id of the treenode (either author id when downloading, or twitter id in db)
            parent references the tree_id of the parent
         """
         self.node_id = node_id
         self.data = data
+        if tree_id_name not in data:
+            logger.error(f"tree_id_name: {tree_id_name} should be in the dataset or changed as param for TreeNode")
+        else:
+            self.tree_id = data[tree_id_name]
         """
         the following data fields are required
           text= root_node.data["text"],
@@ -158,6 +162,7 @@ class TreeNode:
         return result
 
     def to_post_list(self):
+        self.data["tree_id"] = self.tree_id
         self.data["parent_id"] = self.parent_id
         self.data["post_id"] = self.node_id
         post_list = [self.data]
