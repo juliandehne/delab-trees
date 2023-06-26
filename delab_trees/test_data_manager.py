@@ -138,28 +138,32 @@ def __generate_fake_tweet_data(text, id, conversation_id=1, lang="en"):
 
 
 def __get_example_conversations():
+    """
+    this is freely invented
+    :return:
+    """
     tweet1 = '>>Warum darf man das wort Zigeuner-Soße eigentlich nicht mehr sagen?'
-    ans1 = '>>@merle123 weil das z-wort diskriminierent gegenüber Sinti und Roma ist'
-    ans1_1 = '>>@karin508 früher haben wir einfach gesagt was uns gefällt, da haben sich die scheiß Zigeuner doch auch nicht beschwert!'
-    ans1_2 = '>>@reinhartt ernsthaft...?'
-    ans1_3 = '>>@reinhartt bruder halts maul'
-    ans2 = '>>@merle123 man darf sagen was man will. In diesem Land gilt die Meinungfreiheit! diese linken Spasten wollen und den Mund verbieten!'
-    ans2_1 = '>>@diana59 isso!'
-    ans2_2 = '>>@diana59 heul doch.'
-    ans3 = '>>@merle123 frag ich mich auch! Als ob das irgendeinen Zigeuner juckt, die können doch eh kein deutsch'
-    ans4 = '>>@merle123 die scheiß zecken wollen doch nur dass wir spuren! lass dir nichts verbieten!'
+    ans1 = '>>weil das z-wort diskriminierent gegenüber Sinti und Roma ist'
+    ans1_1 = '>>früher haben wir einfach gesagt was uns gefällt, da haben sich die scheiß Zigeuner doch auch nicht beschwert!'
+    ans1_2 = '>>ernsthaft...?'
+    ans1_3 = '>>bruder halts maul'
+    ans2 = '>> man darf sagen was man will. In diesem Land gilt die Meinungfreiheit! diese linken Spasten wollen und den Mund verbieten!'
+    ans2_1 = '>> isso!'
+    ans2_2 = '>> heul doch.'
+    ans3 = '>>frag ich mich auch! Als ob das irgendeinen Zigeuner juckt, die können doch eh kein deutsch'
+    ans4 = '>> die scheiß zecken wollen doch nur dass wir spuren! lass dir nichts verbieten!'
 
     twitterconv_de = [tweet1, ans1, ans1_1, ans1_2, ans1_3, ans2, ans2_1, ans2_2, ans3, ans4]
 
     tweet1_en = '>>Happy International Day against Homophobia,Transphobia and Biphobia!'
-    ans1_en = '>>@lauren505 wow! the fags are getting really creative with their days!'
-    ans1_2_en = '>>@micheal77 for real!'
-    ans1_3_en = '>>@micheal77 if you dont want to celebrate it, thats fine'
-    ans2_en = '>>@lauren505 why are dykes always telling everyone they are dykes? i really dont care!'
-    ans2_1_en = '>>@karennn when did they say they were a lesbian?:D'
-    ans2_2_en = '>>@karennn i swear the lesbos are getting crazy'
-    ans3_en = '>>lauren505 yayy we love<3'
-    ans4_en = '>>lauren505 so everyday is homo day now, you think?'
+    ans1_en = '>>wow! the fags are getting really creative with their days!'
+    ans1_2_en = '>> for real!'
+    ans1_3_en = '>> if you dont want to celebrate it, thats fine'
+    ans2_en = '>> why are dykes always telling everyone they are dykes? i really dont care!'
+    ans2_1_en = '>> when did they say they were a lesbian?:D'
+    ans2_2_en = '>>i swear the lesbos are getting crazy'
+    ans3_en = '>> yayy we love<3'
+    ans4_en = '>> so everyday is homo day now, you think?'
 
     twitterconv_en = [tweet1_en, ans1_en, ans1_2_en, ans1_3_en, ans2_en, ans2_1_en, ans2_2_en, ans3_en, ans4_en]
 
