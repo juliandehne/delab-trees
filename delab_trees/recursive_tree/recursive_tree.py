@@ -13,10 +13,13 @@ class TreeNode:
         """
         self.node_id = node_id
         self.data = data
-        if tree_id_name not in data:
-            logger.error(f"tree_id_name: {tree_id_name} should be in the dataset or changed as param for TreeNode")
+        if not custom_is_iterable(data):
+            logger.error("data should be iterable and contain 'tree_id' and 'post_id' as well as 'text' as keys")
         else:
-            self.tree_id = data[tree_id_name]
+            if tree_id_name not in data:
+                logger.error(f"tree_id_name: {tree_id_name} should be in the dataset or changed as param for TreeNode")
+            else:
+                self.tree_id = data[tree_id_name]
         """
         the following data fields are required
           text= root_node.data["text"],
@@ -178,3 +181,11 @@ def to_post_list_helper(node):
         post_list.append(child.data)
         post_list = post_list + to_post_list_helper(child)
     return post_list
+
+
+def custom_is_iterable(obj):
+    try:
+        iter(obj)
+        return True
+    except TypeError:
+        return False
