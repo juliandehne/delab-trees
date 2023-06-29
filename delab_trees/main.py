@@ -42,6 +42,24 @@ class TreeManager:
     def __len__(self):
         return len(self.trees)
 
+    def __str__(self):
+        result = f"TreeManager containing {len(self.trees)} trees: "
+        for key, tree in self.trees.items():
+            result += f"Tree with tree_id {key} and object: {tree}."
+            result += " \n"
+        return result
+
+    @classmethod
+    def from_trees(cls, trees: list[DelabTree]):
+        # result_map = dict(list(map(lambda x: (x.conversation_id, x))))
+        df_list = []
+        tree_dict = {}
+        for tree in trees:
+            df_list.append(tree.df)
+            tree_dict[tree.conversation_id] = tree
+        df = pd.concat(df_list)
+        return cls(df, tree_dict)
+
     def __pre_process_df(self):
         """
         convert float and int ids to str
@@ -88,6 +106,14 @@ class TreeManager:
                     self.trees.update(tree_group)
 
         return self
+
+    def get_flow_sample(self, n, flow_length=5, filter_function=None):
+        # tree: DelabTree
+        flow_results = []
+        for tree_id, tree in self.trees.items():
+            flows = tree.get_flow_candidates(flow_length, filter_function=filter_function)
+            flow_results += flows
+        return flow_results[:n]
 
     def __map_trees_parallel(self, tree_map_f, max_workers=1000):
         new_trees = []
@@ -284,8 +310,3 @@ class TreeManager:
             return applied_pb_model
         else:
             return applied_pb_model[tree.conversation_id]
-
-
-
-
-

@@ -1,6 +1,7 @@
 import statistics
 from collections import defaultdict
 from copy import deepcopy
+from typing import Callable, Dict, List
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -44,6 +45,9 @@ class DelabTree:
             self.reply_graph = g
         self.author_graph: MultiDiGraph = None
         self.conversation_id = self.df.iloc[0][TABLE.COLUMNS.TREE_ID]
+
+    def __str__(self):
+        return f"DelabTree with graph{self.reply_graph} and max_depth{self.depth()}"
 
     @classmethod
     def from_recursive_tree(cls, root_node: TreeNode):
@@ -391,11 +395,12 @@ class DelabTree:
     def as_flow_duo(self, min_length_flows=6, min_post_branching=3, min_pre_branching=3, metric="sentiment",
                     verbose=False) -> FLowDuo:
         """
-        compute the two flows of the tree that have the greatest different regarding the metric
+        compute the two flows of the tree that have the greatest difference regarding the metric
         :param min_length_flows:
         :param min_post_branching:
         :param min_pre_branching:
-        :param metric: the dataframe needs to contain a column sentiment_value or toxicity_value, metric can be toxicity instead of default
+        :param metric: the dataframe needs to contain a column sentiment_value or toxicity_value,
+        metric can be toxicity instead of default
         :param verbose:
         :return:
         """
@@ -449,6 +454,18 @@ class DelabTree:
 
         name_of_longest = max(flow_dict, key=lambda x: len(set(flow_dict[x])))
         return flow_dict, name_of_longest
+
+    def get_flow_candidates(self, length_flow: int, filter_function: Callable[[list[DelabPost]], bool] = None):
+        flow_dict, name_longest = self.get_conversation_flows()
+        # discarding the names of the flows
+        flows = flow_dict.values()
+
+        if filter_function is not None:
+            flows = list(filter(lambda x: filter_function(x), flows))
+
+        flows = list(filter(lambda x: len(x) > length_flow, flows))
+
+        return flows
 
     def get_author_metrics(self):
         result = {}
