@@ -115,6 +115,15 @@ class TreeManager:
             flow_results += flows
         return flow_results[:n]
 
+    def remove(self, tree_id):
+        self.df = self.df.drop(self.df[self.df[TABLE.COLUMNS.TREE_ID] == tree_id].index)
+        # self.trees = {key: value for key, value in self.trees.items() if key != tree_id}
+        # del self.trees[tree_id]
+
+    def keep(self, tree_ids):
+        self.df = self.df.drop(self.df[~self.df[TABLE.COLUMNS.TREE_ID].isin(tree_ids)].index)
+        self.trees = {key: value for key, value in self.trees.items() if key in tree_ids}
+
     def __map_trees_parallel(self, tree_map_f, max_workers=1000):
         new_trees = []
         new_dfs = []
