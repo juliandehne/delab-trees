@@ -458,7 +458,36 @@ class DelabTree:
     def get_flow_candidates(self, length_flow: int, filter_function: Callable[[list[DelabPost]], bool] = None):
         flow_dict, name_longest = self.get_conversation_flows()
         # discarding the names of the flows
-        flows = flow_dict.values()
+
+        # removing intersecting flows (preparation)
+        post_ids_sets = {}
+        for name, flow in flow_dict.items():
+            post: DelabPost
+            post_ids = set()
+            for post in flow:
+                post_ids.add(post.post_id)
+            post_ids_sets[name] = post_ids
+        # find intersecting flows
+        flows_to_keep = set()
+        removed_keys = set()
+        for set_name1, post_id_set in post_ids_sets.items():
+            for set_name2, post_id_set2 in post_ids_sets.items():
+                if set_name1 in removed_keys or set_name2 in removed_keys:
+                    continue
+                if not post_id_set.isdisjoint(post_id_set2):
+                    if len(post_id_set) > len(post_id_set2):
+                        removed_keys.add(set_name2)
+                        if set_name2 in flows_to_keep:
+                            flows_to_keep.remove(set_name2)
+                        flows_to_keep.add(set_name1)
+                    else:
+                        removed_keys.add(set_name1)
+                        if set_name1 in flows_to_keep:
+                            flows_to_keep.remove(set_name1)
+                        flows_to_keep.add(set_name2)
+        # update the dictionary to only keep the longest flows
+        flow_dict_filtered = {key: value for key, value in flow_dict.items() if key in flows_to_keep}
+        flows = flow_dict_filtered.values()
 
         if filter_function is not None:
             flows = list(filter(lambda x: filter_function(x), flows))
