@@ -126,6 +126,25 @@ def get_example_conversation_tree(lang="en"):
     return tree
 
 
+def get_sample_flow_test_tree():
+    d = {'tree_id': [1] * 7,
+         'post_id': [1, 2, 3, 4, 5, 6, 7],
+         'parent_id': [None, 1, 2, 3, 3, 4, 6],
+         'author_id': ["james", "mark", "steven", "john", "mark", "steven", "john"],
+         'text': ["I am James", "I am Mark", " I am Steven", "I am John", "I am Mark", " I am Steven", "I am John"],
+         "created_at": [pd.Timestamp('2017-01-01T01'),
+                        pd.Timestamp('2017-01-01T02'),
+                        pd.Timestamp('2017-01-01T03'),
+                        pd.Timestamp('2017-01-01T04'),
+                        pd.Timestamp('2017-01-01T05'),
+                        pd.Timestamp('2017-01-01T06'),
+                        pd.Timestamp('2017-01-01T07')
+                        ]}
+    df = pd.DataFrame(data=d)
+    forest = TreeManager(df)
+    return forest
+
+
 def __generate_fake_tweet_data(text, id, conversation_id=1, lang="en"):
     data = {TABLE.COLUMNS.TEXT: text,
             TABLE.COLUMNS.POST_ID: id,

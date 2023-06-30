@@ -16,6 +16,7 @@ from tqdm import tqdm
 from delab_trees.constants import TABLE
 from delab_trees.constants import TREE_IDENTIFIER
 from delab_trees.delab_author_metric import AuthorMetric
+from delab_trees.delab_post import DelabPost
 from delab_trees.delab_tree import DelabTree
 from delab_trees.parallel_utils import compute_optimal_cpu_count, create_trees_from_grouped, \
     create_trees_from_grouped_helper, compute_tre_map_f
@@ -107,7 +108,7 @@ class TreeManager:
 
         return self
 
-    def get_flow_sample(self, n, flow_length=5, filter_function=None):
+    def get_flow_sample(self, n, flow_length=5, filter_function=None) -> list[list[DelabPost]]:
         # tree: DelabTree
         flow_results = []
         for tree_id, tree in self.trees.items():

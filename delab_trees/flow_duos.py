@@ -145,3 +145,9 @@ def compute_intersection_id_in_weird_trees(branching_index, flow_1_ids, flow_2_i
                     break
     intersection_id = flow_1_ids[branching_index]
     return branching_index, intersection_id
+
+
+def compute_flow_name(flow: list[DelabPost], prefix=""):
+    first = flow[0]
+    last = flow[-1]
+    return prefix + str(first.post_id) + "_" + str(last.post_id)

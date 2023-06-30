@@ -1,7 +1,7 @@
 import unittest
 
 from delab_trees.delab_tree import DelabTree
-from delab_trees.test_data_manager import get_social_media_trees
+from delab_trees.test_data_manager import get_social_media_trees, get_sample_flow_test_tree
 
 
 class DuoFlowAlgorithmTestCase(unittest.TestCase):
@@ -30,3 +30,11 @@ class DuoFlowAlgorithmTestCase(unittest.TestCase):
         if flow_duo is not None:
             assert len(flow_duo.posts1) > 0 and len(flow_duo.posts2) > 0
             assert flow_duo.toxic_delta > 0
+
+    def test_sample_flow_computation(self):
+        forest = get_sample_flow_test_tree()
+        tree: DelabTree = forest.trees[1]
+        flows = tree.get_flow_candidates(5)
+        assert len(flows) == 1
+        candidate_flow = flows[0]
+        assert len(candidate_flow) == 6
