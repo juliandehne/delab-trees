@@ -175,9 +175,10 @@ class DelabTree:
             if pd_is_nan(row[TABLE.COLUMNS.PARENT_ID]):
                 root = row
             else:
-                non_root_node = TreeNode(data=row, node_id=row["post_id"], parent_id=row["parent_id"])
+                non_root_node = TreeNode(data=row, node_id=row["post_id"], parent_id=row["parent_id"],
+                                         tree_id=self.conversation_id)
                 orphans.append(non_root_node)
-        root_node = TreeNode(data=root, node_id=root["post_id"])
+        root_node = TreeNode(data=root, node_id=root["post_id"], tree_id=self.conversation_id)
         # now solve all the orphans that have not been seen
         orphan_added = True
         while orphan_added:
@@ -492,7 +493,11 @@ class DelabTree:
         if filter_function is not None:
             flows = list(filter(lambda x: filter_function(x), flows))
 
+        # filter min_length_flow
         flows = list(filter(lambda x: len(x) > length_flow, flows))
+
+        # filter_subsequent_authors
+        # flows = list(filter(lambda x: len(set(list(map(lambda y: y.author_id, x)))) < length_flow, flows))
 
         return flows
 
