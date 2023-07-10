@@ -663,6 +663,10 @@ class DelabTree:
             print("it is not connected")
         return result
 
+    def __validate_time_stamps_differ(self, verbose):
+        created_at_set = set(self.df[TABLE.COLUMNS.CREATED_AT])
+        assert len(created_at_set) == len(self.df.index), "all posts need to have a different time stamp!"
+
     def validate(self, verbose=True, check_for="all"):
 
         result = True
@@ -683,6 +687,7 @@ class DelabTree:
                     result = result and self.__validate_orphans(verbose)
                     result = result and self.__is_connected(verbose)
                     result = result and self.__validate_multiple_edges(verbose)
+                    result = result and self.__validate_time_stamps_differ(verbose)
                     result = result and nx.is_tree(self.reply_graph)
                     if verbose and not nx.is_tree(self.reply_graph):
                         print("is not a valid tree")
