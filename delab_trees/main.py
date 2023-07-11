@@ -108,13 +108,14 @@ class TreeManager:
 
         return self
 
-    def get_flow_sample(self, n, flow_length=5, filter_function=None) -> list[list[DelabPost]]:
+    def get_flow_sample(self, flow_length=5, filter_function=None) -> list[list[DelabPost]]:
         # tree: DelabTree
         flow_results = []
         for tree_id, tree in self.trees.items():
             flows = tree.get_flow_candidates(flow_length, filter_function=filter_function)
             flow_results += flows
-        return flow_results[:n]
+        assert all(len(x) > flow_length for x in flow_results)
+        return flow_results
 
     def remove(self, tree_id):
         self.df = self.df.drop(self.df[self.df[TABLE.COLUMNS.TREE_ID] == tree_id].index)
