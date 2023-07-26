@@ -665,11 +665,12 @@ class DelabTree:
 
     def __validate_time_stamps_differ(self, verbose):
         created_at_set = set(self.df[TABLE.COLUMNS.CREATED_AT])
-        if verbose:
+        result = len(created_at_set) == len(self.df.index)
+        if verbose and not result:
             duplicates = self.df[self.df.duplicated(TABLE.COLUMNS.CREATED_AT)]
             print("all posts need to have a different time stamp:", duplicates)
         # assert len(created_at_set) == len(self.df.index), "all posts need to have a different time stamp!"
-        return len(created_at_set) == len(self.df.index)
+        return result
 
     def validate(self, verbose=True, check_for="all"):
 
