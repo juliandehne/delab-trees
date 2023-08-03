@@ -110,7 +110,7 @@ def paint_bipartite(G2, black_edges, red_edges, root_node):
 def pd_is_nan(parent_id):
     if isinstance(parent_id, pd.Series):
         return parent_id.apply(lambda x: pd_is_nan(x))
-    result = parent_id is None or parent_id == 'nan' or pd.isna(parent_id) or parent_id == "NA"
+    result = parent_id is None or parent_id == 'nan' or pd.isna(parent_id) or parent_id == "NA" or parent_id == "None"
     if result:
         pass
     return result
