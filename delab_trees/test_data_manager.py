@@ -100,7 +100,10 @@ def get_social_media_trees(platform="twitter", n=None, context="production") -> 
         file = os.path.join(this_dir, 'data/dataset_twitter_no_text.pkl')
     file = file.replace("reddit", platform)
     df = pd.read_pickle(file)
+    df["post_id"] = df["post_id"].astype(str)
+    df["parent_id"] = df["parent_id"].astype(str)
     manager = TreeManager(df, n=n)
+    manager.remove_invalid()
     return manager
 
 

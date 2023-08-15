@@ -12,6 +12,10 @@ class PBAlgorithmsTestCase(unittest.TestCase):
     def test_load_trees(self):
         assert len(self.manager.trees) == 10
 
+    def test_load_all_trees(self):
+        manager = get_social_media_trees()
+        assert manager.validate()
+
     def test_pb_algorithm(self):
         # tree: DelabTree = self.manager.trees[1]
         # pb_vision = self.manager.get_pb_vision(tree)

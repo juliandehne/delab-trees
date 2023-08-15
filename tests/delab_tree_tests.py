@@ -1,13 +1,18 @@
 import unittest
 
 from delab_trees.delab_tree import DelabTree
-from delab_trees.test_data_manager import get_test_manager
+from delab_trees.test_data_manager import get_test_manager, get_test_tree
 
 
 class DelabTreeConstructionTestCase(unittest.TestCase):
 
     def setUp(self):
         self.manager = get_test_manager()
+
+    def test_load_single_tree(self):
+        test_tree: DelabTree = get_test_tree()
+        assert test_tree.total_number_of_posts() == 4
+        assert test_tree.average_branching_factor() > 0
 
     def test_load_trees(self):
         # tests if the dataframes is loaded correctly as multiple trees

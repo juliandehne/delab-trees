@@ -15,7 +15,7 @@ with open(path.join(HERE, 'README.md'), encoding='utf-8') as f:
 # This call to setup() does all the work
 setup(
     name="delab-trees",
-    version="0.3.2",
+    version="0.3.6",
     description="a library to analyse reply trees in forums and social media",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -26,9 +26,7 @@ setup(
     classifiers=[
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.9",
         "Operating System :: OS Independent"
     ],
     packages=find_packages(),
