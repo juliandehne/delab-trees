@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this software in your research, please cite it using the following metadata."
+title: "delab-trees, a python library to analyze conversation trees"
+version: 0.3.4
+date-released: 2023-09-18
+
+authors:
+  - given-names: Julian
+    family-names: Dehne
+    affiliation: "University of Göttingen"
+    orcid: "https://orcid.org/0000-0001-9265-9619"
+
+repository-code: "https://github.com/juliandehne/delab-trees"
+license: MIT
