@@ -47,7 +47,8 @@ class DelabTree:
         self.conversation_id = self.df.iloc[0][TABLE.COLUMNS.TREE_ID]
 
     def __str__(self):
-        return f"DelabTree with graph{self.reply_graph} and max_depth{self.depth()}"
+        text = self.as_recursive_tree().to_string()
+        return f"DelabTree with graph{self.reply_graph} and max_depth{self.depth()}, \n {text}"
 
     @classmethod
     def from_recursive_tree(cls, root_node: TreeNode):
@@ -667,12 +668,12 @@ class DelabTree:
         created_at_set = set(self.df[TABLE.COLUMNS.CREATED_AT])
         result = len(created_at_set) == len(self.df.index)
         if verbose and not result:
-            duplicates = self.df[self.df.duplicated(TABLE.COLUMNS.CREATED_AT)]
-            print("all posts need to have a different time stamp:", duplicates)
+            duplicates = self.df[self.df.duplicated(TABLE.COLUMNS.CREATED_AT, keep=False)]
+            print("all posts need to have a different time stamp:", duplicates.text)
         # assert len(created_at_set) == len(self.df.index), "all posts need to have a different time stamp!"
         return result
 
-    def validate(self, verbose=True, check_for="all"):
+    def validate(self, verbose=True, check_for="all", check_time_stamps_differ=True):
 
         result = True
         # check for cycles only
@@ -692,7 +693,8 @@ class DelabTree:
                     result = result and self.__validate_orphans(verbose)
                     result = result and self.__is_connected(verbose)
                     result = result and self.__validate_multiple_edges(verbose)
-                    result = result and self.__validate_time_stamps_differ(verbose)
+                    if check_time_stamps_differ:
+                        result = result and self.__validate_time_stamps_differ(verbose)
                     result = result and nx.is_tree(self.reply_graph)
                     if verbose and not nx.is_tree(self.reply_graph):
                         print("is not a valid tree")

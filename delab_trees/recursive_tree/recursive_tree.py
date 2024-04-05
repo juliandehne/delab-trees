@@ -77,7 +77,7 @@ class TreeNode:
             tabbed_text.append(tabbed_sentence)
         separator = ".\n" + (level * "\t")
         tabbed_text = "\n" + (level * "\t") + separator.join(tabbed_text)
-        return str(self.data.get("tw_author__name", "namenotgiven")) + "/" + str(
+        return self.node_id + "/" + str(self.data.get("tw_author__name", "namenotgiven")) + "/" + str(
             self.data.get("tw_author__location", "locationnotgiven")) + "/" + str(
             self.data["author_id"]) + ":" + tabbed_text + "\n\n"
 
