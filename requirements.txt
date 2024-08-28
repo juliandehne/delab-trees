@@ -3,7 +3,7 @@ networkx~=2.8
 pandas~=1.5.3
 scikit-learn
 matplotlib~=3.4.3
-tensorflow==2.11.0
+tensorflow
 keras==2.11.0
 pytest==7.1.2
 numpy==1.22.3
