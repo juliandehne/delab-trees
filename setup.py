@@ -15,7 +15,7 @@ with open(path.join(HERE, 'README.md'), encoding='utf-8') as f:
 # This call to setup() does all the work
 setup(
     name="delab-trees",
-    version="0.4.0",
+    version="0.4.1",
     description="a library to analyse reply trees in forums and social media",
     long_description=long_description,
     long_description_content_type="text/markdown",
