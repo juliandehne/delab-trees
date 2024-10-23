@@ -24,6 +24,12 @@ class DuoFlowAlgorithmTestCase(unittest.TestCase):
         flows, longest = test_tree.get_conversation_flows()
         assert len(flows[longest]) > 0
 
+    def test_simple_flow_computation(self):
+        test_tree = self.manager.random()
+        print("loading simple:flow")
+        flows = test_tree.get_conversation_flows(as_list=True)
+        assert len(flows) > 0
+
     def test_duo_flow_computation(self):
         test_tree = self.manager.random()
         flow_duo = test_tree.as_flow_duo()

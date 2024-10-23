@@ -52,24 +52,46 @@ class DelabTree:
 
     @classmethod
     def from_recursive_tree(cls, root_node: TreeNode):
+        """
+        a DelabTree can also be created from a recursive Tree object instead of a table
+        @see recursive_tree.TreeNode
+        :param root_node:
+        :return:
+        """
         rows = root_node.to_post_list()
         df = pd.DataFrame(rows)
         return cls(df=df)
 
     def __update_df(self):
+        """
+        an internal function for consistency
+        :return:
+        """
         post_ids = self.reply_graph.nodes
         self.df = self.df[self.df["post_id"].isin(post_ids)]
 
     def branching_weight(self):
+        """
+        compute the branching weight of a tree
+        :return: m
+        """
         if self.reply_graph is None:
             raise GraphNotInitializedException()
         return nx.tree.branching_weight(self.as_tree())
 
     def average_branching_factor(self):
+        """
+        compute the average branching factor
+        :return: m
+        """
         result = 2 * self.reply_graph.number_of_edges() / self.reply_graph.number_of_nodes()
         return result
 
     def root_dominance(self):
+        """
+        compute a metric of how dominant the author of the original post is in the conversation
+        :return: m
+        """
         root_node = get_root(self.reply_graph)
         root_author = self.df[self.df[TABLE.COLUMNS.POST_ID] == root_node][TABLE.COLUMNS.AUTHOR_ID]
         root_author = list(root_author)[0]
@@ -78,6 +100,10 @@ class DelabTree:
         return root_dominance
 
     def total_number_of_posts(self):
+        """
+        compute the total number of posts
+        :return: n
+        """
         return len(self.df.index)
 
     def depth(self):
@@ -85,6 +111,10 @@ class DelabTree:
         return len(longest_path)
 
     def as_reply_graph(self):
+        """
+        returns the internal representation of the tree as a reply graph
+        :return:
+        """
         df2: DataFrame = deepcopy(self.df)
         node2creation = df2.set_index(TABLE.COLUMNS.POST_ID).to_dict()[TABLE.COLUMNS.CREATED_AT]
         # df2 = df2[df2[TABLE.COLUMNS.PARENT_ID] != 'nan']
@@ -434,7 +464,7 @@ class DelabTree:
         )
         return flow_duo_result
 
-    def get_conversation_flows(self) -> (dict[str, list[DelabPost]], str):
+    def get_conversation_flows(self, as_list=False) -> (dict[str, list[DelabPost]], str):
         """
         computes all flows (paths that lead from root to leaf) in the reply tree
         :rtype: object
@@ -456,6 +486,8 @@ class DelabTree:
 
         name_of_longest = max(flow_dict, key=lambda x: len(set(flow_dict[x])))
 
+        if as_list:
+            return flow_dict.values()
 
         return flow_dict, name_of_longest
 

@@ -64,7 +64,7 @@ assert test_tree.average_branching_factor() > 0
 A summary of basic metrics can be attained by calling
 
 ```python
-from delab_trees.main import get_test_tree
+from delab_trees.test_data_manager import get_test_tree
 from delab_trees.delab_tree import DelabTree
 
 test_tree : DelabTree = get_test_tree()
@@ -98,7 +98,7 @@ rb_vision_dictionary : dict["tree_id", dict["author_id", "vision_metric"]] = man
 The following two complex metrics are implemented: 
 
 ```python
-from delab_trees.main import get_test_manager
+from delab_trees.test_data_manager import get_test_manager
 
 manager = get_test_manager()
 rb_vision_dictionary = manager.get_rb_vision() # predict an author having seen a post
