@@ -6,11 +6,21 @@ A library to analyze conversation trees.
 
 pip install delab_trees
 
+## Learning Resource
+
+In order to learn more about the library including some metrics and research questions that can be answered, have a look at the more detailed [jupyter notebook](index.ipynb). It uses the [Quarto Jupyterlab Extension](https://quarto.org/docs/tools/jupyter-lab-extension.html) for rendering. Use this for a better readability. 
+
+```python
+python3 -m pip install jupyterlab-quarto
+```
+
+
 ## Get started
 
 Example data for Reddit and Twitter are available here https://github.com/juliandehne/delab-trees/raw/main/delab_trees/data/dataset_[reddit|twitter]_no_text.pkl. 
 The data is structure only. Ids, text, links, or other information that would break confidentiality of the academic 
 access have been omitted.
+
 
 The trees are loaded from tables like this:
 
