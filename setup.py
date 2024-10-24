@@ -32,6 +32,20 @@ setup(
     packages=find_packages(),
     package_data={'delab_trees.data': ['dataset_reddit_no_text.pkl', 'dataset_twitter_no_text.pkl']},
     include_package_data=True,
-    install_requires=["numpy", "pandas", "networkx", "scikit-learn", "keras", "matplotlib",
-                      "tensorflow", "tqdm"]
+    install_requires=[
+        "numpy==1.22.3",
+        "pandas~=1.5.3",
+        "networkx~=2.8",
+        "scikit-learn",
+        "keras",
+        "matplotlib~=3.4.3",
+        "tensorflow",
+        "tqdm",
+        "pytest==7.1.2",
+        "jupyter"
+    ],
+    python_requires='>=3.9, <3.10',  # Allows all Python 3.9.x versions
+    setup_requires=[
+        "setuptools>=64"
+    ],
 )

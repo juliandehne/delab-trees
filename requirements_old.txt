@@ -1,0 +1,10 @@
+setuptools~=59.6.0
+networkx~=2.8
+pandas~=1.5.3
+scikit-learn
+matplotlib~=3.4.3
+tensorflow
+keras
+pytest==7.1.2
+numpy==1.22.3
+tqdm
