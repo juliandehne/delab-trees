@@ -26,17 +26,8 @@ class DelabTree:
 
     def __init__(self, df: pd.DataFrame, g: MultiDiGraph = None):
         """
-        Assumes the following columns as a pandas df:
-        (see constants.py)
-        class TABLE:
-            class COLUMNS:
-                PARENT_ID = "parent_id"
-                CREATED_AT = "created_at"
-                AUTHOR_ID = "author_id"
-                TEXT = "text"
-                POST_ID = "post_id"
-                TREE_ID = "tree_id"
-        :param df:
+        Initializes a DelabTree instance with a pandas DataFrame and optionally a graph.
+        Expects columns for PARENT_ID, CREATED_AT, AUTHOR_ID, TEXT, POST_ID, and TREE_ID in the DataFrame.
         """
         self.df: DataFrame = deepcopy(df)
         if g is None:
@@ -47,51 +38,35 @@ class DelabTree:
         self.conversation_id = self.df.iloc[0][TABLE.COLUMNS.TREE_ID]
 
     def __str__(self):
+        """Returns a string representation of the DelabTree with a summary of its graph and depth."""
         text = self.as_recursive_tree().to_string()
         return f"DelabTree with graph{self.reply_graph} and max_depth{self.depth()}, \n {text}"
 
     @classmethod
     def from_recursive_tree(cls, root_node: TreeNode):
-        """
-        a DelabTree can also be created from a recursive Tree object instead of a table
-        @see recursive_tree.TreeNode
-        :param root_node:
-        :return:
-        """
+        """Creates a DelabTree instance from a recursive TreeNode structure."""
         rows = root_node.to_post_list()
         df = pd.DataFrame(rows)
         return cls(df=df)
 
     def __update_df(self):
-        """
-        an internal function for consistency
-        :return:
-        """
+        """Updates the internal DataFrame to include only nodes in the reply graph."""
         post_ids = self.reply_graph.nodes
         self.df = self.df[self.df["post_id"].isin(post_ids)]
 
     def branching_weight(self):
-        """
-        compute the branching weight of a tree
-        :return: m
-        """
+        """Computes the branching weight of the tree."""
         if self.reply_graph is None:
             raise GraphNotInitializedException()
         return nx.tree.branching_weight(self.as_tree())
 
     def average_branching_factor(self):
-        """
-        compute the average branching factor
-        :return: m
-        """
+        """Calculates the average branching factor for the tree."""
         result = 2 * self.reply_graph.number_of_edges() / self.reply_graph.number_of_nodes()
         return result
 
     def root_dominance(self):
-        """
-        compute a metric of how dominant the author of the original post is in the conversation
-        :return: m
-        """
+        """Calculates the dominance of the root author in the conversation."""
         root_node = get_root(self.reply_graph)
         root_author = self.df[self.df[TABLE.COLUMNS.POST_ID] == root_node][TABLE.COLUMNS.AUTHOR_ID]
         root_author = list(root_author)[0]
@@ -100,21 +75,16 @@ class DelabTree:
         return root_dominance
 
     def total_number_of_posts(self):
-        """
-        compute the total number of posts
-        :return: n
-        """
+        """Returns the total number of posts in the conversation."""
         return len(self.df.index)
 
     def depth(self):
+        """Calculates the depth (longest path) of the reply graph."""
         longest_path = nx.dag_longest_path(self.reply_graph)
         return len(longest_path)
 
     def as_reply_graph(self):
-        """
-        returns the internal representation of the tree as a reply graph
-        :return:
-        """
+        """Generates a directed reply graph from the posts DataFrame."""
         df2: DataFrame = deepcopy(self.df)
         node2creation = df2.set_index(TABLE.COLUMNS.POST_ID).to_dict()[TABLE.COLUMNS.CREATED_AT]
         # df2 = df2[df2[TABLE.COLUMNS.PARENT_ID] != 'nan']
@@ -136,16 +106,12 @@ class DelabTree:
         return networkx_graph
 
     def as_author_graph(self):
-        """
-        This computes the combined reply graph with the author_of relations included.
-        :return:
-        """
+        """Creates a directed graph combining reply and author relations."""
         if self.reply_graph is None:
             self.as_reply_graph()
         if self.author_graph is not None:
             return self.author_graph
         df = self.df.assign(label=GRAPH.LABELS.AUTHOR_OF)
-        # print(df)
         networkx_graph = nx.from_pandas_edgelist(df, source="author_id", target="post_id", edge_attr='label',
                                                  create_using=nx.DiGraph())
         author2authorlabel = dict([(author_id, GRAPH.SUBSETS.AUTHORS) for author_id in self.__get_author_ids()])
@@ -155,15 +121,9 @@ class DelabTree:
         return self.author_graph
 
     def as_author_interaction_graph(self):
-        """
-        This computes the projected graph from the reply graph to the who answered whom graph (different nodes).
-        This could be considered a unweighted bipartite projection.
-        :return:
-        """
+        """Creates a graph representing author interactions based on replies."""
         G = self.as_author_graph()
-        # assuming the dataframe and the reply graph are two views on the same data!
         author_ids = self.__get_author_ids()
-
         G2 = nx.DiGraph()
         G2.add_nodes_from(author_ids)
 
@@ -183,10 +143,12 @@ class DelabTree:
         return G2
 
     def __get_author_ids(self):
+        """Retrieves all unique author IDs from the DataFrame."""
         author_ids = set(self.df[TABLE.COLUMNS.AUTHOR_ID].tolist())
         return author_ids
 
     def as_tree(self):
+        """Generates a tree representation of the reply graph using BFS traversal."""
         if self.reply_graph is None:
             raise GraphNotInitializedException()
         root = get_root(self.reply_graph)
@@ -194,11 +156,12 @@ class DelabTree:
         return tree
 
     def as_post_list(self) -> list[DelabPost]:
+        """Converts the DataFrame into a list of DelabPost objects."""
         return DelabPosts.from_pandas(self.df)
 
     def as_recursive_tree(self):
-        # The recursive Tree has the tostring and toxml implemented
-        df_sorted = self.df.sort_values('created_at')  # sort for better performance when inserting
+        """Converts the DataFrame into a recursive tree structure."""
+        df_sorted = self.df.sort_values('created_at')
         rows = df_sorted.to_dict(orient='records')
         root = None
         orphans = []
@@ -217,12 +180,7 @@ class DelabTree:
         return root_node
 
     def as_biggest_connected_tree(self, stateless=True):
-        """
-        if there are faulty trees you can use this to approximate the biggest tree
-        :param stateless: if not true, returns the DelabTree as a new object
-        :return:
-        """
-        # create a graph
+        """Finds and returns the largest connected component of the reply graph."""
         G = self.reply_graph
 
         # initialize variables to keep track of the largest tree found so far
@@ -247,10 +205,8 @@ class DelabTree:
 
     def as_removed_cycles(self, as_delab_tree=True, compute_arborescence=False):
         """
-        remove cycles in graph and return minimum spanning arborescence
-        :param compute_arborescence:
-        :param as_delab_tree: if True will return a new DelabTree object instead of the edited graph
-        :return:
+        Removes cycles in the reply graph.
+        Optionally computes a minimum spanning arborescence if compute_arborescence is True.
         """
         # assert nx.is_weakly_connected(self.reply_graph), "the graph needs to be weakly connected to remove cycles"
 
@@ -339,23 +295,17 @@ class DelabTree:
             df2["parent_id"] = df2["parent_id"].apply(change_parents)
             df2.loc[df2["parent_id"] == df2["post_id"], "parent_id"] = 'nan'
             tree2 = DelabTree(df2)
-            # tree2.reply_graph = tree2.as_tree() # no idea why
-            # valid = tree2.validate(verbose=True)
-            # assert valid
             return tree2
         else:
             self.df["parent_id"] = self.df["parent_id"].apply(change_parents)
             self.df.loc[self.df["parent_id"] == self.df["post_id"], "parent_id"] = 'nan'
             self.reply_graph = self.as_reply_graph()
-            # self.reply_graph = self.as_tree()  # no idea why
             return self.reply_graph
 
     def as_merged_self_answers_graph(self, as_delab_tree=True, return_deleted=False):
         """
-        subsequent posts of the same author are merged into one post
-        :param as_delab_tree: if true, returns the DelabTree as a new object with the merged_self_answers
-        :param return_deleted:
-        :return:
+        Merges sequential posts by the same author into a single post.
+        Optionally returns a new DelabTree object with merged posts.
         """
         posts_df = self.df[[TABLE.COLUMNS.POST_ID,
                             TABLE.COLUMNS.AUTHOR_ID,
@@ -400,8 +350,6 @@ class DelabTree:
         for row_index2 in row_indexes2:
             author_id, parent_author_id, parent_id, post_id = self.__get_table_row_as_names(posts_df, row_index2)
             if not (pd_is_nan(parent_id)):
-                # if parent_id not in post_ids and parent_id not in to_delete_list:
-                #     print("conversation {} has no root_node".format(self.conversation_id))
                 if post_id in to_change_map:
                     new_parent = to_change_map[post_id]
                     if new_parent in post_ids:
@@ -414,8 +362,7 @@ class DelabTree:
         assert len(edges) > 0, "there are no edges for conversation {}".format(self.conversation_id)
         G.add_edges_from(edges, label=GRAPH.LABELS.PARENT_OF)
         nx.set_node_attributes(G, GRAPH.SUBSETS.TWEETS, name="subset")
-        # return G, to_delete_list, changed_nodes
-        # print("removed {} and changed {}".format(to_delete_list, to_change_map))
+
         if as_delab_tree:
             self.reply_graph = G
             self.__update_df()
@@ -427,14 +374,7 @@ class DelabTree:
     def as_flow_duo(self, min_length_flows=6, min_post_branching=3, min_pre_branching=3, metric="sentiment",
                     verbose=False) -> FLowDuo:
         """
-        compute the two flows of the tree that have the greatest difference regarding the metric
-        :param min_length_flows:
-        :param min_post_branching:
-        :param min_pre_branching:
-        :param metric: the dataframe needs to contain a column sentiment_value or toxicity_value,
-        metric can be toxicity instead of default
-        :param verbose:
-        :return:
+        Computes the two conversation flows with the highest difference in the given metric (e.g., sentiment).
         """
         flows, longest = self.get_conversation_flows()
 
@@ -466,9 +406,8 @@ class DelabTree:
 
     def get_conversation_flows(self, as_list=False) -> (dict[str, list[DelabPost]], str):
         """
-        computes all flows (paths that lead from root to leaf) in the reply tree
-        :rtype: object
-        :return: flow_dict : str -> [DelabPost], name_of_longest : str
+        Calculates and returns all conversation flows (paths from root to leaf).
+        Optionally returns as a list.
         """
         # reply_graph = self.as_reply_graph()
         root = get_root(self.reply_graph)
@@ -492,6 +431,9 @@ class DelabTree:
         return flow_dict, name_of_longest
 
     def get_flow_candidates(self, length_flow: int, filter_function: Callable[[list[DelabPost]], bool] = None):
+        """
+        Filters conversation flows based on length and an optional custom filter function.
+        """
         flow_dict, name_longest = self.get_conversation_flows()
         # discarding the names of the flows
 
@@ -537,6 +479,10 @@ class DelabTree:
         return flows
 
     def get_author_metrics(self):
+        """
+        Computes centrality metrics (closeness, betweenness, and Katz centrality) for each author.
+        Returns a dictionary of AuthorMetric objects for each author.
+        """
         result = {}
         author_interaction_graph = self.as_author_interaction_graph()
         katz_centrality = nx.katz_centrality(author_interaction_graph)
@@ -561,11 +507,7 @@ class DelabTree:
         return result
 
     def get_average_author_metrics(self):
-        """
-        computes the same metrics as for specific authors but as the average of all authors in the graph
-        :return:
-        """
-        # calculate the degree centrality of each node
+        """Calculates average centrality metrics for all authors."""
         g = self.as_author_interaction_graph()
         closeness_centrality = statistics.mean(nx.closeness_centrality(g).values())
         katz_centrality = statistics.mean(nx.katz_centrality(g).values())
@@ -575,6 +517,10 @@ class DelabTree:
         return metric
 
     def get_baseline_author_vision(self):
+        """
+        Calculates a baseline vision score for each author based on their reply behavior.
+        Returns a dictionary mapping author IDs to their baseline vision score.
+        """
         author2baseline = {}
         author_interaction_graph, to_delete_list, to_change_map = self.as_merged_self_answers_graph(return_deleted=True,
                                                                                                     as_delab_tree=False)
@@ -611,11 +557,14 @@ class DelabTree:
             # author2baseline[author] = (root_distance_measure + reply_vision_measure) / 2  # un-normalized
             author2baseline[author] = reply_vision_measure  # un-normalized
             baseline = author2baseline[author]
-            # assert 0 <= baseline <= 1
         return author2baseline
 
     def __get_author_post_map(self):
-        tweet2author = my_dict = self.df.set_index(TABLE.COLUMNS.POST_ID)[TABLE.COLUMNS.AUTHOR_ID].to_dict()
+        """
+        Generates two dictionaries mapping post IDs to authors and authors to their posts.
+        Returns both mappings as a tuple.
+        """
+        tweet2author = self.df.set_index(TABLE.COLUMNS.POST_ID)[TABLE.COLUMNS.AUTHOR_ID].to_dict()
         inverted_dict = defaultdict(list)
         for key, value in tweet2author.items():
             inverted_dict[value].append(key)
@@ -623,24 +572,29 @@ class DelabTree:
         return tweet2author, author2posts
 
     def get_single_author_metrics(self, author_id):
+        """Returns centrality metrics for a specific author, or None if not found."""
         return self.get_author_metrics().get(author_id, None)
 
     @staticmethod
     def __get_table_row_as_names(posts_df, row_index):
+        """
+        Retrieves key attributes (author_id, parent_author_id, parent_id, post_id) from a row in posts_df.
+        """
         post_data = posts_df.loc[row_index]
         parent_id = post_data[TABLE.COLUMNS.PARENT_ID]
         post_id = post_data[TABLE.COLUMNS.POST_ID]
         author_id = post_data[TABLE.COLUMNS.AUTHOR_ID]
         parent_author_id = None
-        # if parent_id is not None and np.isnan(parent_id) is False:
         parent_author_frame = posts_df[posts_df[TABLE.COLUMNS.POST_ID] == parent_id]
         if not parent_author_frame.empty:
             parent_author_id = parent_author_frame.iloc[0][TABLE.COLUMNS.AUTHOR_ID]
         return author_id, parent_author_id, parent_id, post_id
 
     def validate_internal_structure(self):
-        is_dublicated = self.df[
-            'post_id'].duplicated().any()
+        """
+        Validates the internal structure of the DataFrame, ensuring unique post IDs and consistent alignment with the graph.
+        """
+        is_dublicated = self.df['post_id'].duplicated().any()
         assert not is_dublicated, "The 'post_id' column is not unique for tree with id {}.".format(
             self.conversation_id)
         df_and_graph_align = all(x in list(self.df["post_id"]) or x in list(self.df["parent_id"])
@@ -648,6 +602,7 @@ class DelabTree:
         assert df_and_graph_align, "graph and dataframe out of sync"
 
     def __validate_cycles(self, verbose):
+        """Checks the reply graph for cycles; if found, prints the cycles if verbose is True."""
         try:
             cycles = nx.find_cycle(self.reply_graph)
             if len(cycles) > 0:
@@ -658,6 +613,7 @@ class DelabTree:
             return True
 
     def __validate_orphans(self, verbose):
+        """Validates that the graph has only one root and no orphans."""
         if len(list(nx.weakly_connected_components(self.reply_graph))) > 1:
             roots = [n for n, d in self.reply_graph.in_degree() if d == 0]
             if verbose:
@@ -667,6 +623,7 @@ class DelabTree:
             return True
 
     def __validate_node_names(self, verbose):
+        """Ensures no invalid node names (like 'NA' or 'nan') are present in the graph."""
         nodes = self.reply_graph.nodes
         # check for all kinds of problems
         if 'NA' in nodes or 'nan' in nodes:
@@ -676,6 +633,7 @@ class DelabTree:
         return True
 
     def __validate_multiple_edges(self, verbose):
+        """Checks for multiple edges between nodes in the reply graph."""
         G = self.reply_graph
         # Check for multiple edges
         has_multiple_edges = False
@@ -692,23 +650,26 @@ class DelabTree:
         return not has_multiple_edges
 
     def __is_connected(self, verbose):
-
+        """Validates that the reply graph is connected."""
         result = nx.is_connected(self.reply_graph.to_undirected())
         if not result and verbose:
             print("it is not connected")
         return result
 
     def __validate_time_stamps_differ(self, verbose):
+        """Ensures all posts have unique timestamps."""
         created_at_set = set(self.df[TABLE.COLUMNS.CREATED_AT])
         result = len(created_at_set) == len(self.df.index)
         if verbose and not result:
             duplicates = self.df[self.df.duplicated(TABLE.COLUMNS.CREATED_AT, keep=False)]
             print("all posts need to have a different time stamp:", duplicates.text)
-        # assert len(created_at_set) == len(self.df.index), "all posts need to have a different time stamp!"
         return result
 
     def validate(self, verbose=True, check_for="all", check_time_stamps_differ=True):
-
+        """
+        Validates the graph structure, checking cycles, orphans, connectivity, and more.
+        Options allow for specific validation types and timestamp uniqueness checking.
+        """
         result = True
         # check for cycles only
         if check_for == 'cycles':
@@ -758,6 +719,9 @@ class DelabTree:
         plt.show()
 
     def paint_reply_graph(self):
+        """
+        Draws the reply graph in a circular layout with nodes labeled by the last three characters of each ID.
+        """
         tree = self.as_tree()
 
         # create a new dictionary of nodes with truncated labels
