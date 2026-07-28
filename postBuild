@@ -55,7 +55,7 @@ echo
 echo Installed Quarto
 echo
 # install required python packages
-python3 -m pip install jupyterlab-quarto==0.1.45
+python3 -m pip install jupyterlab-quarto==0.3.3
 
 echo
 echo Completed
