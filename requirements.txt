@@ -1,4 +1,4 @@
-setuptools~=59.6.0
+setuptools>=64
 networkx~=2.8
 pandas~=1.5.3
 scikit-learn
